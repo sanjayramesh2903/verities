@@ -1,0 +1,33 @@
+{
+  "name": "@verities/backend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:migrate": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@fastify/cookie": "^11.0.0",
+    "@fastify/cors": "^10.0.0",
+    "@fastify/jwt": "^9.0.0",
+    "@fastify/rate-limit": "^10.0.0",
+    "@prisma/client": "^6.0.0",
+    "@verities/shared": "*",
+    "fastify": "^5.2.0",
+    "fastify-plugin": "^5.0.0",
+    "ioredis": "^5.4.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "~5.9.3",
+    "@types/node": "^22.0.0"
+  }
+}

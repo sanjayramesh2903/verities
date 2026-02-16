@@ -1,0 +1,11 @@
+{
+  "name": "verities",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "dev:frontend": "npm run dev -w packages/frontend",
+    "dev:backend": "npm run dev -w packages/backend",
+    "build:shared": "npm run build -w packages/shared",
+    "build": "npm run build:shared && npm run build -w packages/frontend && npm run build -w packages/backend"
+  }
+}
