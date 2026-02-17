@@ -16,7 +16,12 @@ export async function reviewDocumentRoute(server: FastifyInstance) {
     const { text, options } = parsed.data;
     const wordCount = text.split(/\s+/).length;
 
-    const extractedClaims = await extractClaims(text, 100);
+    let extractedClaims: Awaited<ReturnType<typeof extractClaims>>;
+    try {
+      extractedClaims = await extractClaims(text, 100);
+    } catch (err) {
+      return reply.status(503).send({ error: (err as Error).message });
+    }
 
     const scoredClaims = extractedClaims
       .map((ec) => {

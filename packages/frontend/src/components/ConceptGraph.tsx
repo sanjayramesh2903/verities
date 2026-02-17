@@ -1,12 +1,6 @@
 import { useEffect, useRef, useMemo } from "react";
 import * as d3 from "d3";
-
-// Accepts any object with these three fields — works for both Claim and HighRiskClaim
-export interface ClaimLike {
-  claim_id: string;
-  original_text: string;
-  verdict?: string;
-}
+import type { Claim } from "@verities/shared";
 
 interface GraphNode {
   id: string;
@@ -23,7 +17,7 @@ interface GraphEdge {
 }
 
 interface Props {
-  claims: ClaimLike[];
+  claims: Claim[];
 }
 
 // Verdict → node fill color (Obsidian-friendly palette)
@@ -39,7 +33,7 @@ const BG_COLOR = "#0f172a";       // slate-950 — Obsidian dark
 const EDGE_COLOR = "rgba(148,163,184,0.3)";
 const EDGE_HOVER_COLOR = "rgba(148,163,184,0.7)";
 
-function buildGraph(claims: ClaimLike[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
+function buildGraph(claims: Claim[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
   const conceptMap = new Map<string, string>(); // label → node id
