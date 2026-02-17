@@ -10,7 +10,9 @@ export function hashKey(input: string): string {
   return createHash("sha256").update(input).digest("hex").slice(0, 32);
 }
 
-// In-memory cache with TTL support
+// In-memory LRU cache with TTL support and max size
+const MAX_CACHE_ENTRIES = 1000;
+
 class InMemoryCacheService implements CacheService {
   private store = new Map<string, { value: string; expiresAt: number }>();
   private cleanupTimer: ReturnType<typeof setInterval>;
@@ -26,10 +28,18 @@ class InMemoryCacheService implements CacheService {
       this.store.delete(key);
       return null;
     }
+    // LRU: move to end of Map (most recently accessed)
+    this.store.delete(key);
+    this.store.set(key, entry);
     return JSON.parse(entry.value) as T;
   }
 
   async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
+    // Evict oldest entries if at capacity
+    if (this.store.size >= MAX_CACHE_ENTRIES) {
+      const oldest = this.store.keys().next().value;
+      if (oldest) this.store.delete(oldest);
+    }
     this.store.set(key, {
       value: JSON.stringify(value),
       expiresAt: Date.now() + ttlSeconds * 1000,
@@ -96,10 +106,13 @@ export const CacheKeys = {
   claimResult: (claimText: string, style: string) => `claim:v1:${hashKey(claimText + style)}`,
   searchResult: (query: string) => `search:v1:${hashKey(query)}`,
   sourceMetadata: (url: string) => `srcmeta:v1:${hashKey(url)}`,
+  // Full-text block cache: same text+style returns the full response instantly
+  analyzeResult: (text: string, style: string) => `analyze:v1:${hashKey(text + style)}`,
 };
 
 export const CacheTTL = {
   CLAIM_RESULT: 7 * 24 * 3600,   // 7 days
   SEARCH_RESULT: 3600,            // 1 hour
   SOURCE_METADATA: 24 * 3600,     // 24 hours
+  ANALYZE_RESULT: 4 * 24 * 3600,  // 4 days
 };

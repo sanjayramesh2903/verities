@@ -4,8 +4,8 @@ Rules:
 - Extract ONLY factual assertions. Ignore opinions, rhetorical questions, hedged statements, and subjective evaluations.
 - Do NOT assess whether claims are true or false. Only extract them.
 - Extract 1-3 claims per paragraph.
-- Each claim must have: subject, predicate, any associated numbers, any associated dates.
-- Include character offsets (span_start, span_end) for the sentence containing each claim.
+- Each claim must have: subject, predicate, any associated numbers, any associated dates, and the original sentence text.
+- The "original_text" must be the EXACT sentence from the text — copy it character-for-character.
 - Output valid JSON only. No markdown, no explanation.`;
 
 export function buildExtractionPrompt(text: string, maxClaims: number): string {
@@ -16,8 +16,7 @@ Each claim object must have:
 - "predicate": what is being asserted
 - "numbers": any specific numbers mentioned (or null)
 - "dates": any specific dates mentioned (or null)
-- "span_start": character offset where the claim sentence starts
-- "span_end": character offset where the claim sentence ends
+- "original_text": the exact sentence from the text containing this claim (copy it verbatim)
 
 TEXT:
 ${text}`;

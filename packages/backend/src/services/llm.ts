@@ -1,11 +1,19 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { ExtractionResponseSchema, VerdictResponseSchema, RewriteResponseSchema } from "@verities/shared";
 import type { ExtractedClaim, VerdictResponse, RewriteResponse } from "@verities/shared";
 import { EXTRACTION_SYSTEM, buildExtractionPrompt } from "../prompts/extraction.js";
 import { VERDICT_SYSTEM, buildVerdictPrompt } from "../prompts/verdict.js";
 import { REWRITE_SYSTEM, buildRewritePrompt } from "../prompts/rewrite.js";
 
-const client = new Anthropic();
+const GROQ_BASE = "https://api.groq.com/openai/v1/chat/completions";
+
+// Groq free models — fast inference, no credit card required
+// https://console.groq.com/docs/models
+const MODELS = [
+  "llama-3.3-70b-versatile",
+  "llama3-70b-8192",
+  "gemma2-9b-it",
+  "mixtral-8x7b-32768",
+];
 
 interface RetryOptions {
   maxRetries?: number;
@@ -13,45 +21,84 @@ interface RetryOptions {
   timeoutMs?: number;
 }
 
-async function callClaudeWithRetry(
+async function callGroq(
   model: string,
   system: string,
   userMessage: string,
-  maxTokens: number,
+  timeoutMs: number
+): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY environment variable is required");
+  }
+
+  const response = await Promise.race([
+    fetch(GROQ_BASE, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: userMessage },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    }),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`LLM call timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => "");
+    throw new Error(`Groq ${model} error ${response.status}: ${errBody}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) {
+    throw new Error(`No text response from ${model}`);
+  }
+  return text;
+}
+
+/**
+ * Try each free model in order. If one fails (rate limited, down, etc.),
+ * move to the next. Retries the full model list up to maxRetries times.
+ */
+async function callWithFallback(
+  system: string,
+  userMessage: string,
   options: RetryOptions = {}
 ): Promise<string> {
-  const { maxRetries = 2, baseDelayMs = 1000, timeoutMs = 30000 } = options;
+  const { maxRetries = 1, baseDelayMs = 1000, timeoutMs = 30000 } = options;
+  const lastErrors: string[] = [];
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await Promise.race([
-        client.messages.create({
-          model,
-          max_tokens: maxTokens,
-          system,
-          messages: [{ role: "user", content: userMessage }],
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`LLM call timed out after ${timeoutMs}ms`)), timeoutMs)
-        ),
-      ]);
-
-      const textBlock = response.content.find((b) => b.type === "text");
-      if (!textBlock || textBlock.type !== "text") {
-        throw new Error("No text response from Claude");
+    lastErrors.length = 0;
+    for (const model of MODELS) {
+      try {
+        return await callGroq(model, system, userMessage, timeoutMs);
+      } catch (err) {
+        const msg = (err as Error).message;
+        lastErrors.push(`${model.split("/")[1]}: ${msg}`);
+        console.warn(`Model ${model} failed: ${msg}`);
       }
-      return textBlock.text;
-    } catch (err) {
-      const isLastAttempt = attempt === maxRetries;
-      if (isLastAttempt) throw err;
+    }
 
+    if (attempt < maxRetries) {
       const delay = baseDelayMs * Math.pow(2, attempt);
-      console.warn(`LLM call failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`, (err as Error).message);
+      console.warn(`All models failed (round ${attempt + 1}), retrying in ${delay}ms...`);
       await new Promise((r) => setTimeout(r, delay));
     }
   }
 
-  throw new Error("Unreachable");
+  const summary = lastErrors[0] ?? "unknown error";
+  throw new Error(`LLM unavailable — ${summary}`);
 }
 
 function parseJSON<T>(raw: string, schema: { safeParse: (v: unknown) => { success: boolean; data?: T; error?: unknown } }): T {
@@ -64,13 +111,63 @@ function parseJSON<T>(raw: string, schema: { safeParse: (v: unknown) => { succes
   return result.data as T;
 }
 
+/**
+ * Find the best matching position of `needle` in `haystack` using exact match
+ * first, then falling back to case-insensitive and substring matching.
+ */
+function findSpan(haystack: string, needle: string): { start: number; end: number } {
+  // Exact match
+  let idx = haystack.indexOf(needle);
+  if (idx !== -1) return { start: idx, end: idx + needle.length };
+
+  // Case-insensitive match
+  const lower = haystack.toLowerCase();
+  const needleLower = needle.toLowerCase();
+  idx = lower.indexOf(needleLower);
+  if (idx !== -1) return { start: idx, end: idx + needle.length };
+
+  // Try matching a significant substring (first 60 chars)
+  const prefix = needleLower.slice(0, 60);
+  if (prefix.length > 10) {
+    idx = lower.indexOf(prefix);
+    if (idx !== -1) {
+      // Find the end of the sentence from this position
+      const sentenceEnd = haystack.indexOf(".", idx + prefix.length);
+      const end = sentenceEnd !== -1 ? sentenceEnd + 1 : Math.min(idx + needle.length, haystack.length);
+      return { start: idx, end };
+    }
+  }
+
+  // Fallback: return 0,0 (claim text will be used as-is from original_text)
+  return { start: 0, end: 0 };
+}
+
 export async function extractClaims(text: string, maxClaims: number): Promise<ExtractedClaim[]> {
   const prompt = buildExtractionPrompt(text, maxClaims);
-  const raw = await callClaudeWithRetry(
-    "claude-haiku-4-5-20251001", EXTRACTION_SYSTEM, prompt, 1000,
-    { maxRetries: 2, baseDelayMs: 500, timeoutMs: 20000 }
-  );
-  return parseJSON(raw, ExtractionResponseSchema).claims;
+  const raw = await callWithFallback(EXTRACTION_SYSTEM, prompt, {
+    maxRetries: 1, baseDelayMs: 500, timeoutMs: 20000,
+  });
+  const claims = parseJSON(raw, ExtractionResponseSchema).claims;
+
+  // Post-process: compute correct spans from original_text via text matching
+  const usedRanges: Array<{ start: number; end: number }> = [];
+  return claims.map((claim) => {
+    if (claim.original_text) {
+      const span = findSpan(text, claim.original_text);
+      // Avoid overlapping spans — search after already-used ranges
+      if (span.start === 0 && span.end === 0) {
+        // Could not find text at all; keep LLM spans if plausible
+        if (claim.span_start !== undefined && claim.span_end !== undefined &&
+            claim.span_start >= 0 && claim.span_end <= text.length && claim.span_start < claim.span_end) {
+          return claim;
+        }
+      } else {
+        claim.span_start = span.start;
+        claim.span_end = span.end;
+      }
+    }
+    return claim;
+  });
 }
 
 export async function generateVerdict(
@@ -90,10 +187,9 @@ export async function generateVerdict(
     sources.map((s) => ({ id: s.id, title: s.title, snippet: s.snippet, tier: s.tier }))
   );
 
-  const raw = await callClaudeWithRetry(
-    "claude-sonnet-4-5-20250929", VERDICT_SYSTEM, prompt, 500,
-    { maxRetries: 2, baseDelayMs: 1000, timeoutMs: 30000 }
-  );
+  const raw = await callWithFallback(VERDICT_SYSTEM, prompt, {
+    maxRetries: 1, baseDelayMs: 1000, timeoutMs: 20000,
+  });
   return parseJSON(raw, VerdictResponseSchema);
 }
 
@@ -106,9 +202,8 @@ export async function generateRewrite(
   }
 
   const prompt = buildRewritePrompt(originalText, sources);
-  const raw = await callClaudeWithRetry(
-    "claude-sonnet-4-5-20250929", REWRITE_SYSTEM, prompt, 300,
-    { maxRetries: 2, baseDelayMs: 1000, timeoutMs: 30000 }
-  );
+  const raw = await callWithFallback(REWRITE_SYSTEM, prompt, {
+    maxRetries: 1, baseDelayMs: 1000, timeoutMs: 15000,
+  });
   return parseJSON(raw, RewriteResponseSchema);
 }

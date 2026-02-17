@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: verities-api
+    runtime: node
+    region: oregon
+    rootDir: packages/backend
+    buildCommand: cd ../.. && npm install && npm run build:shared && cd packages/backend && npx prisma generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CONTENT_FILTER_ENABLED
+        value: "true"

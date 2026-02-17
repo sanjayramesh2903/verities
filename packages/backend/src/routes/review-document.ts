@@ -20,7 +20,9 @@ export async function reviewDocumentRoute(server: FastifyInstance) {
 
     const scoredClaims = extractedClaims
       .map((ec) => {
-        const originalText = text.slice(ec.span_start, ec.span_end);
+        const originalText = (ec.span_start < ec.span_end && ec.span_end <= text.length)
+          ? text.slice(ec.span_start, ec.span_end)
+          : ec.original_text || `${ec.subject} ${ec.predicate}`;
         const { score, signals } = scoreClaimRisk(originalText, ec);
         return {
           claim_id: randomUUID(),

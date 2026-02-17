@@ -40,6 +40,10 @@ export function createRepository(db: PrismaClient) {
       });
     },
 
+    async findUserById(id: string) {
+      return db.user.findUnique({ where: { id } });
+    },
+
     async saveCheck(userId: string, type: string, inputSnippet: string, resultJson: string, claimCount: number) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
@@ -123,6 +127,68 @@ export function createRepository(db: PrismaClient) {
         console.log(`Cleaned ${result.count} expired checks`);
       }
       return result.count;
+    },
+
+    // ── Topic Graph ──────────────────────────────────────────────────────────
+    async saveTopics(
+      userId: string,
+      checkId: string,
+      claims: Array<{ subject: string; original_text?: string }>
+    ) {
+      const topicIds: string[] = [];
+
+      for (const claim of claims) {
+        const label = claim.subject.slice(0, 100).trim();
+        if (!label) continue;
+
+        const topic = await db.topic.upsert({
+          where: { userId_label: { userId, label } },
+          create: { userId, label, claimCount: 1 },
+          update: { claimCount: { increment: 1 }, updatedAt: new Date() },
+        });
+
+        topicIds.push(topic.id);
+
+        await db.topicClaim.create({
+          data: {
+            topicId: topic.id,
+            checkId,
+            claimText: (claim.original_text ?? claim.subject).slice(0, 500),
+          },
+        }).catch(() => {});
+      }
+
+      // Create/increment edges between all co-occurring topics in this check
+      for (let i = 0; i < topicIds.length; i++) {
+        for (let j = i + 1; j < topicIds.length; j++) {
+          const [sourceId, targetId] = [topicIds[i], topicIds[j]].sort();
+          await db.topicEdge.upsert({
+            where: { userId_sourceId_targetId: { userId, sourceId, targetId } },
+            create: { userId, sourceId, targetId, weight: 1 },
+            update: { weight: { increment: 1 } },
+          }).catch(() => {});
+        }
+      }
+    },
+
+    async getUserGraph(userId: string) {
+      const [topics, edges] = await Promise.all([
+        db.topic.findMany({
+          where: { userId },
+          orderBy: { claimCount: "desc" },
+          take: 100,
+        }),
+        db.topicEdge.findMany({
+          where: { userId },
+          orderBy: { weight: "desc" },
+          take: 500,
+        }),
+      ]);
+
+      return {
+        nodes: topics.map((t) => ({ id: t.id, label: t.label, claimCount: t.claimCount })),
+        edges: edges.map((e) => ({ source: e.sourceId, target: e.targetId, weight: e.weight })),
+      };
     },
   };
 }

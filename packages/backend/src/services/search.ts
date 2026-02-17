@@ -9,6 +9,72 @@ export interface SearchResult {
   datePublished?: string;
 }
 
+/**
+ * Search using DuckDuckGo HTML scraping — no API key required.
+ * Falls back gracefully on parse errors.
+ */
+async function searchDuckDuckGo(query: string): Promise<SearchResult[]> {
+  const params = new URLSearchParams({ q: query });
+  const response = await fetch(`https://html.duckduckgo.com/html/?${params}`, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`DuckDuckGo search failed: ${response.status}`);
+  }
+
+  const html = await response.text();
+  const results: SearchResult[] = [];
+
+  // Parse DuckDuckGo HTML results — each result is in a .result class
+  const resultBlocks = html.split(/class="result\s/);
+
+  for (let i = 1; i < resultBlocks.length && results.length < 10; i++) {
+    const block = resultBlocks[i];
+
+    // Extract title and URL from the result link
+    const linkMatch = block.match(/class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/);
+    if (!linkMatch) continue;
+
+    let url = linkMatch[1];
+    const titleHtml = linkMatch[2];
+    const title = titleHtml.replace(/<[^>]+>/g, "").trim();
+
+    // DuckDuckGo wraps URLs in a redirect — extract the actual URL
+    if (url.includes("uddg=")) {
+      const uddgMatch = url.match(/uddg=([^&]+)/);
+      if (uddgMatch) {
+        url = decodeURIComponent(uddgMatch[1]);
+      }
+    }
+
+    // Extract snippet
+    const snippetMatch = block.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/(?:a|td|div|span)/);
+    const snippet = snippetMatch
+      ? snippetMatch[1].replace(/<[^>]+>/g, "").trim()
+      : "";
+
+    if (!url || !title) continue;
+
+    try {
+      const parsedUrl = new URL(url);
+      results.push({
+        title,
+        url,
+        snippet,
+        domain: parsedUrl.hostname.replace(/^www\./, ""),
+      });
+    } catch {
+      // Skip malformed URLs
+    }
+  }
+
+  return results;
+}
+
 export async function searchForClaim(claimText: string, cache?: CacheService): Promise<SearchResult[]> {
   // Check cache first
   if (cache) {
@@ -17,43 +83,10 @@ export async function searchForClaim(claimText: string, cache?: CacheService): P
     if (cached) return cached;
   }
 
-  const apiKey = process.env.BING_SEARCH_API_KEY;
-  if (!apiKey) {
-    throw new Error("BING_SEARCH_API_KEY environment variable is required");
-  }
-
-  const params = new URLSearchParams({
-    q: claimText,
-    count: "10",
-    textFormat: "Raw",
-    safeSearch: "Moderate",
-  });
-
-  const response = await fetch(`https://api.bing.microsoft.com/v7.0/search?${params}`, {
-    headers: { "Ocp-Apim-Subscription-Key": apiKey },
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Bing search failed: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const webPages = data.webPages?.value ?? [];
-
-  const results: SearchResult[] = webPages.map((page: Record<string, string>) => {
-    const url = new URL(page.url);
-    return {
-      title: page.name ?? "",
-      url: page.url,
-      snippet: page.snippet ?? "",
-      domain: url.hostname.replace(/^www\./, ""),
-      datePublished: page.dateLastCrawled,
-    };
-  });
+  const results = await searchDuckDuckGo(claimText);
 
   // Store in cache
-  if (cache) {
+  if (cache && results.length > 0) {
     const cacheKey = CacheKeys.searchResult(claimText);
     await cache.set(cacheKey, results, CacheTTL.SEARCH_RESULT).catch(() => {});
   }

@@ -100,8 +100,9 @@ export const ExtractedClaimSchema = z.object({
   predicate: z.string(),
   numbers: z.string().nullable().default(null),
   dates: z.string().nullable().default(null),
-  span_start: z.number(),
-  span_end: z.number(),
+  original_text: z.string(),
+  span_start: z.number().optional().default(0),
+  span_end: z.number().optional().default(0),
 });
 
 export const ExtractionResponseSchema = z.object({

@@ -5,17 +5,14 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 
-  // Database
+  // Database (Supabase Postgres in prod, SQLite for local dev)
   DATABASE_URL: z.string().default("file:./dev.db"),
 
   // Cache
   REDIS_URL: z.string().optional(),
 
-  // LLM
-  ANTHROPIC_API_KEY: z.string().min(1),
-
-  // Search
-  BING_SEARCH_API_KEY: z.string().min(1),
+  // LLM — Groq (free, no credit card: console.groq.com)
+  GROQ_API_KEY: z.string().min(1),
 
   // Auth
   GOOGLE_CLIENT_ID: z.string().optional(),

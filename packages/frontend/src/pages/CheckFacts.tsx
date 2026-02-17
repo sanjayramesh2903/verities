@@ -1,43 +1,75 @@
-import { useState } from "react";
-import { Search, AlertCircle, RefreshCw, Info } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Search, AlertCircle, RefreshCw, Info, GitFork } from "lucide-react";
 import { LIMITS } from "@verities/shared";
-import type { AnalyzeClaimsResponse, CitationStyle } from "@verities/shared";
-import { analyzeClaims } from "../lib/api";
+import type { Claim, CitationStyle } from "@verities/shared";
+import { analyzeClaimsStream } from "../lib/api";
 import Navbar from "../components/Navbar";
 import ClaimCard from "../components/ClaimCard";
 
-type Status = "idle" | "loading" | "success" | "error";
+const ConceptGraph = lazy(() => import("../components/ConceptGraph"));
+
+type Status = "idle" | "extracting" | "streaming" | "success" | "error";
 
 export default function CheckFacts() {
-  const [text, setText] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [text, setText] = useState(searchParams.get("text") ?? "");
+  const autoSubmitted = useRef(false);
   const [citationStyle, setCitationStyle] = useState<CitationStyle>("mla");
   const [status, setStatus] = useState<Status>("idle");
-  const [result, setResult] = useState<AnalyzeClaimsResponse | null>(null);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [totalClaims, setTotalClaims] = useState(0);
+  const [processingTimeMs, setProcessingTimeMs] = useState(0);
   const [error, setError] = useState("");
 
-  const handleSubmit = async () => {
+  // Auto-submit if navigated here with ?text= param (e.g. from Review page)
+  useEffect(() => {
+    if (text.trim() && !autoSubmitted.current) {
+      autoSubmitted.current = true;
+      setSearchParams({}, { replace: true });
+      handleSubmit();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSubmit = useCallback(async () => {
     if (!text.trim()) return;
-    setStatus("loading");
+    setStatus("extracting");
     setError("");
-    setResult(null);
+    setClaims([]);
+    setTotalClaims(0);
 
     try {
-      const res = await analyzeClaims({
-        text,
-        citation_style: citationStyle,
-        options: { max_claims: 10 },
-      });
-      setResult(res);
-      setStatus("success");
+      await analyzeClaimsStream(
+        { text, citation_style: citationStyle, options: { max_claims: 10 } },
+        {
+          onExtraction(total) {
+            setTotalClaims(total);
+            setStatus("streaming");
+          },
+          onClaim(_index, claim) {
+            setClaims((prev) => [...prev, claim]);
+          },
+          onDone(data) {
+            setProcessingTimeMs(data.metadata.processing_time_ms);
+            setStatus("success");
+          },
+          onError(message) {
+            setError(message);
+            setStatus("error");
+          },
+        }
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setStatus("error");
     }
-  };
+  }, [text, citationStyle]);
 
   const handleUseRewrite = (span: { start: number; end: number }, rewriteText: string) => {
     setText((prev) => prev.slice(0, span.start) + rewriteText + prev.slice(span.end));
   };
+
+  const isLoading = status === "extracting" || status === "streaming";
 
   return (
     <div className="min-h-screen bg-ivory">
@@ -86,23 +118,27 @@ export default function CheckFacts() {
               </span>
               <button
                 onClick={handleSubmit}
-                disabled={!text.trim() || status === "loading"}
+                disabled={!text.trim() || isLoading}
                 className="inline-flex items-center gap-2 rounded-xl bg-cerulean px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-cerulean/20 transition-all hover:bg-cerulean-light disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
               >
-                {status === "loading" ? (
+                {isLoading ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
                   <Search className="h-4 w-4" />
                 )}
-                {status === "loading" ? "Checking..." : "Check facts"}
+                {isLoading ? "Checking..." : "Check facts"}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Loading skeleton */}
-        {status === "loading" && (
+        {/* Extracting phase — waiting for LLM to parse claims */}
+        {status === "extracting" && (
           <div className="mt-8 space-y-4">
+            <div className="flex items-center gap-2 rounded-lg bg-parchment/70 px-4 py-2.5">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin text-cerulean" />
+              <span className="text-xs font-medium text-ink-muted">Extracting claims...</span>
+            </div>
             {[0, 1, 2].map((i) => (
               <div key={i} className="annotation-card p-5" style={{ animationDelay: `${i * 100}ms` }}>
                 <div className="space-y-3">
@@ -112,10 +148,54 @@ export default function CheckFacts() {
                   </div>
                   <div className="h-4 w-full rounded animate-shimmer" />
                   <div className="h-4 w-3/4 rounded animate-shimmer" />
-                  <div className="h-3 w-1/2 rounded animate-shimmer delay-100" />
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Streaming phase — claims appear as they complete */}
+        {status === "streaming" && (
+          <div className="mt-8">
+            <div className="mb-4 flex items-center justify-between rounded-lg bg-parchment/70 px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin text-cerulean" />
+                <span className="text-xs font-medium text-ink-muted">
+                  Verifying claims... {claims.length}/{totalClaims}
+                </span>
+              </div>
+              {/* Progress bar */}
+              <div className="h-1.5 w-24 rounded-full bg-parchment overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-cerulean transition-all duration-500"
+                  style={{ width: `${totalClaims > 0 ? (claims.length / totalClaims) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {claims.map((claim, i) => (
+                <ClaimCard
+                  key={claim.claim_id}
+                  claim={claim}
+                  index={i}
+                  onUseRewrite={handleUseRewrite}
+                />
+              ))}
+              {/* Remaining skeleton placeholders */}
+              {Array.from({ length: totalClaims - claims.length }, (_, i) => (
+                <div key={`skeleton-${i}`} className="annotation-card p-5">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-16 rounded animate-shimmer" />
+                      <div className="h-5 w-28 rounded-full animate-shimmer" />
+                    </div>
+                    <div className="h-4 w-full rounded animate-shimmer" />
+                    <div className="h-4 w-3/4 rounded animate-shimmer" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -139,22 +219,20 @@ export default function CheckFacts() {
           </div>
         )}
 
-        {/* Results */}
-        {status === "success" && result && (
+        {/* Final results */}
+        {status === "success" && claims.length > 0 && (
           <div className="mt-8">
-            {/* Summary bar */}
             <div className="mb-4 flex items-center justify-between rounded-lg bg-parchment/70 px-4 py-2.5">
               <span className="text-xs font-medium text-ink-muted">
-                {result.claims.length} claim{result.claims.length !== 1 ? "s" : ""} found
+                {claims.length} claim{claims.length !== 1 ? "s" : ""} found
               </span>
               <span className="text-xs text-ink-faint">
-                {(result.metadata.processing_time_ms / 1000).toFixed(1)}s
+                {(processingTimeMs / 1000).toFixed(1)}s
               </span>
             </div>
 
-            {/* Claim cards */}
             <div className="space-y-4">
-              {result.claims.map((claim, i) => (
+              {claims.map((claim, i) => (
                 <ClaimCard
                   key={claim.claim_id}
                   claim={claim}
@@ -163,6 +241,24 @@ export default function CheckFacts() {
                 />
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Concept Graph */}
+        {status === "success" && claims.length > 0 && (
+          <div className="mt-10 animate-rise">
+            <div className="mb-3 flex items-center gap-2">
+              <GitFork className="h-4 w-4 text-ink-muted" />
+              <h2 className="font-display text-base font-bold text-ink">Concept Map</h2>
+              <span className="text-xs text-ink-faint">— connections between claims and concepts</span>
+            </div>
+            <Suspense fallback={
+              <div className="h-64 rounded-xl bg-slate-950/80 flex items-center justify-center">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-cerulean border-t-transparent" />
+              </div>
+            }>
+              <ConceptGraph claims={claims} />
+            </Suspense>
           </div>
         )}
 

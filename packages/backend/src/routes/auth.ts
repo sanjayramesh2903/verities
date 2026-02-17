@@ -2,17 +2,30 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { requireAuth } from "../auth/auth-hook.js";
 
 export async function authRoutes(server: FastifyInstance) {
-  // Get current user
+  // Get current user — reads real profile from DB if available
   server.get("/auth/me", async (request: FastifyRequest, reply: FastifyReply) => {
     const user = requireAuth(request);
 
-    // Return the JWT-derived identity
-    // Full profile would require DB, but basic info is in the token
+    if (server.repo) {
+      const dbUser = await server.repo.findUserById(user.id).catch(() => null);
+      if (dbUser) {
+        return {
+          id: dbUser.id,
+          email: dbUser.email,
+          displayName: dbUser.displayName ?? null,
+          avatarUrl: dbUser.avatarUrl ?? null,
+          createdAt: dbUser.createdAt.toISOString(),
+        };
+      }
+    }
+
+    // Fallback to JWT-derived identity
     return {
       id: user.id,
       email: user.email,
       displayName: null,
       avatarUrl: null,
+      createdAt: null,
     };
   });
 

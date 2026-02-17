@@ -1,3 +1,4 @@
+import "dotenv/config";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
@@ -18,6 +19,7 @@ import { formatCitationRoute } from "./routes/format-citation.js";
 import { authRoutes } from "./routes/auth.js";
 import { historyRoutes } from "./routes/history.js";
 import { preferencesRoutes } from "./routes/preferences.js";
+import { graphRoute } from "./routes/graph.js";
 
 const server = Fastify({
   logger: {
@@ -79,6 +81,7 @@ async function start() {
   await server.register(authRoutes, { prefix: "/" });
   await server.register(historyRoutes, { prefix: "/" });
   await server.register(preferencesRoutes, { prefix: "/" });
+  await server.register(graphRoute, { prefix: "/" });
 
   // 8. Periodic cleanup of expired checks (every 6 hours)
   if (server.repo) {

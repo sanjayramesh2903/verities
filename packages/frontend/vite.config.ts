@@ -8,10 +8,27 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://localhost:3001",
+        target: "http://127.0.0.1:3001",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
+  },
+  build: {
+    // Enable source map for debugging in production
+    sourcemap: false,
+    // Split vendor chunks for better caching
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "react-vendor": ["react", "react-dom", "react-router-dom"],
+          "icons": ["lucide-react"],
+        },
+      },
+    },
+    // Target modern browsers only
+    target: "es2020",
+    // Inline small assets to reduce HTTP requests
+    assetsInlineLimit: 4096,
   },
 });
