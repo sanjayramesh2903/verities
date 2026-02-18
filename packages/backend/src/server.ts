@@ -38,7 +38,10 @@ async function start() {
   server.decorate("repo", db ? createRepository(db) : null);
 
   // 2. Core plugins
-  await server.register(cors, { origin: true, credentials: true });
+  await server.register(cors, {
+    origin: env.NODE_ENV === "production" ? env.FRONTEND_URL : true,
+    credentials: true,
+  });
 
   // 3. Auth (registered before rate limiting so user identity is known)
   await server.register(jwtPlugin);
