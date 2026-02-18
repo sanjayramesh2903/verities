@@ -1,0 +1,107 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  googleId     String?  @unique
+  email        String   @unique
+  passwordHash String?
+  authProvider String   @default("google")
+  displayName  String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  checks      Check[]
+  preferences UserPreferences?
+  auditLogs   AuditLog[]
+  topics      Topic[]
+  topicEdges  TopicEdge[]
+}
+
+model Check {
+  id           String   @id @default(uuid())
+  userId       String
+  type         String
+  inputSnippet String
+  resultJson   String
+  claimCount   Int
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicClaims TopicClaim[]
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model UserPreferences {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  citationStyle String   @default("mla")
+  maxClaims     Int      @default(10)
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  metadata  String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}
+
+model Topic {
+  id         String     @id @default(uuid())
+  userId     String
+  label      String
+  claimCount Int        @default(1)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  claims TopicClaim[]
+
+  @@unique([userId, label])
+  @@index([userId])
+}
+
+model TopicClaim {
+  id        String @id @default(uuid())
+  topicId   String
+  checkId   String
+  claimText String
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  check Check @relation(fields: [checkId], references: [id], onDelete: Cascade)
+
+  @@index([topicId])
+  @@index([checkId])
+}
+
+model TopicEdge {
+  id       String @id @default(uuid())
+  userId   String
+  sourceId String
+  targetId String
+  weight   Int    @default(1)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sourceId, targetId])
+  @@index([userId])
+}
