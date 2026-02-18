@@ -190,11 +190,17 @@ export async function analyzeClaimsRoute(server: FastifyInstance) {
       } catch { /* use request defaults */ }
     }
 
+    const corsOrigin = reply.getHeader("access-control-allow-origin") as string | undefined;
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
       "X-Accel-Buffering": "no",
+      ...(corsOrigin ? {
+        "Access-Control-Allow-Origin": corsOrigin,
+        "Access-Control-Allow-Credentials": "true",
+        "Vary": "Origin",
+      } : {}),
     });
 
     const send = (event: string, data: unknown) => {
