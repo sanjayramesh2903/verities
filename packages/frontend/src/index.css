@@ -219,6 +219,99 @@ textarea:-webkit-autofill {
   background-size: 24px 24px;
 }
 
+/* ── New v1.0 animations ── */
+
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pop-in {
+  0%   { opacity: 0; transform: scale(0.7); }
+  70%  { transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes confetti-fall {
+  0%   { opacity: 1; transform: translateY(-20px) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(60px) rotate(360deg); }
+}
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+  70%  { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25%       { transform: rotate(-6deg); }
+  75%       { transform: rotate(6deg); }
+}
+
+@keyframes fade-up-stagger {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-gradient {
+  background-size: 300% 300%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+.animate-count-up  { animation: count-up 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-pop-in    { animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-pulse-ring { animation: pulse-ring 1.5s ease-out infinite; }
+.animate-wiggle    { animation: wiggle 0.5s ease-in-out; }
+.animate-fade-up   { animation: fade-up-stagger 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ── Confetti dots (CSS-only, used for "Looking good!" state) ── */
+.confetti-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: confetti-fall 1.2s ease-out forwards;
+}
+
+/* ── Risk border strips on cards ── */
+.risk-card-high   { border-left: 3px solid var(--color-terracotta); }
+.risk-card-medium { border-left: 3px solid var(--color-amber); }
+.risk-card-low    { border-left: 3px solid var(--color-sage); }
+
+/* ── Glassmorphism navbar ── */
+.navbar-glass {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(250, 250, 247, 0.85);
+  border-bottom: 1px solid rgba(235, 232, 225, 0.8);
+}
+
+/* ── Drag-and-drop zone ── */
+.drop-zone {
+  border: 2px dashed var(--color-stone);
+  border-radius: 12px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: var(--color-cerulean);
+  background: var(--color-cerulean-wash);
+}
+
+/* ── Stagger delays extended ── */
+.delay-700  { animation-delay: 700ms; }
+.delay-800  { animation-delay: 800ms; }
+.delay-900  { animation-delay: 900ms; }
+.delay-1000 { animation-delay: 1000ms; }
+
 /* ── Tier badge styling ── */
 .tier-badge {
   display: inline-flex;
