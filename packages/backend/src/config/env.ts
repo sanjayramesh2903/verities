@@ -36,6 +36,13 @@ function loadEnv(): Env {
     console.error("Invalid environment variables:", result.error.flatten().fieldErrors);
     process.exit(1);
   }
+  // Warn if JWT_SECRET is auto-generated in non-dev environments
+  if (result.data.NODE_ENV !== "development" && !process.env.JWT_SECRET) {
+    console.warn(
+      "[SECURITY] JWT_SECRET not set — using auto-generated secret. " +
+      "All sessions will be invalidated on restart. Set JWT_SECRET in your environment."
+    );
+  }
   return result.data;
 }
 
