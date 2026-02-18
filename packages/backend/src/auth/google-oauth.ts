@@ -84,7 +84,7 @@ export const googleOAuthPlugin = fp(async (server: FastifyInstance) => {
         reply.setCookie("verities_token", token, {
           httpOnly: true,
           secure: env.NODE_ENV === "production",
-          sameSite: "lax",
+          sameSite: env.NODE_ENV === "production" ? "none" : "lax",
           path: "/",
           maxAge: 7 * 24 * 60 * 60, // 7 days
         });

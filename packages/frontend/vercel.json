@@ -1,0 +1,6 @@
+{
+  "installCommand": "cd ../.. && npm install",
+  "buildCommand": "(cd ../shared && npm run build) && npm run build",
+  "outputDirectory": "dist",
+  "framework": null
+}
