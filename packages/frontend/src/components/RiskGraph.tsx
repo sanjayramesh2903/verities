@@ -1,6 +1,7 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import * as d3 from "d3";
 import type { HighRiskClaim } from "@verities/shared";
+import { X, AlertTriangle } from "lucide-react";
 
 interface RiskNode {
   id: string;
@@ -20,10 +21,18 @@ interface Props {
   claims: HighRiskClaim[];
 }
 
+const SIGNAL_LABELS: Record<string, string> = {
+  superlative: "Superlative",
+  specific_number: "Number",
+  specific_date: "Date",
+  statistical_assertion: "Statistic",
+  no_citation: "No Citation",
+};
+
 function riskColor(score: number): string {
-  if (score > 0.7) return "#f87171"; // red — likely overstated
-  if (score > 0.4) return "#fb923c"; // amber — needs review
-  return "#4ade80";                  // green — likely ok
+  if (score > 0.7) return "#f87171";
+  if (score > 0.4) return "#fb923c";
+  return "#4ade80";
 }
 
 const CONCEPT_COLOR = "#60a5fa";
@@ -67,9 +76,7 @@ function buildRiskGraph(claims: HighRiskClaim[]): { nodes: RiskNode[]; edges: Ri
       const wordsA = new Set(labelA.toLowerCase().split(/\s+/));
       const wordsB = new Set(labelB.toLowerCase().split(/\s+/));
       const shared = [...wordsA].filter((w) => w.length > 3 && wordsB.has(w));
-      if (shared.length > 0) {
-        edges.push({ source: idA, target: idB, weight: shared.length });
-      }
+      if (shared.length > 0) edges.push({ source: idA, target: idB, weight: shared.length });
     }
   }
 
@@ -80,6 +87,15 @@ export default function RiskGraph({ claims }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { nodes, edges } = useMemo(() => buildRiskGraph(claims), [claims]);
+
+  const [selectedClaim, setSelectedClaim] = useState<HighRiskClaim | null>(null);
+  const selectedIdRef = useRef<string | null>(null);
+  const setSelectedRef = useRef(setSelectedClaim);
+  setSelectedRef.current = setSelectedClaim;
+
+  const claimMap = useMemo(() => new Map(claims.map((c) => [c.claim_id, c])), [claims]);
+  const claimMapRef = useRef(claimMap);
+  claimMapRef.current = claimMap;
 
   useEffect(() => {
     if (!svgRef.current || !containerRef.current || nodes.length === 0) return;
@@ -144,6 +160,15 @@ export default function RiskGraph({ claims }: Props) {
         .on("zoom", (event) => g.attr("transform", event.transform))
     );
 
+    // Click SVG background to deselect
+    svg.on("click", () => {
+      selectedIdRef.current = null;
+      circles.transition().duration(200)
+        .attr("r", (n) => n.type === "claim" ? 14 : 9)
+        .attr("stroke", "none");
+      setSelectedRef.current(null);
+    });
+
     const link = g.append("g").selectAll<SVGLineElement, SimLink>("line")
       .data(simLinks).join("line")
       .attr("stroke", EDGE_COLOR)
@@ -151,7 +176,7 @@ export default function RiskGraph({ claims }: Props) {
 
     const nodeGroup = g.append("g").selectAll<SVGGElement, SimNode>("g")
       .data(simNodes).join("g")
-      .attr("cursor", "grab")
+      .attr("cursor", (d) => d.type === "claim" ? "pointer" : "grab")
       .call(
         d3.drag<SVGGElement, SimNode>()
           .on("start", (event, d) => {
@@ -165,7 +190,7 @@ export default function RiskGraph({ claims }: Props) {
           })
       );
 
-    nodeGroup.append("circle")
+    const circles = nodeGroup.append("circle")
       .attr("r", (d) => d.type === "claim" ? 14 : 9)
       .attr("fill", (d) =>
         d.type === "claim" ? riskColor(d.riskScore ?? 0) : CONCEPT_COLOR
@@ -173,6 +198,7 @@ export default function RiskGraph({ claims }: Props) {
       .attr("filter", "url(#riskglow)")
       .attr("opacity", 0)
       .on("mouseover", function (_, d) {
+        if (selectedIdRef.current === d.id) return;
         d3.select(this).transition().duration(150).attr("r", d.type === "claim" ? 18 : 12);
         link.attr("stroke", (l) =>
           (l.source as SimNode).id === d.id || (l.target as SimNode).id === d.id
@@ -180,8 +206,27 @@ export default function RiskGraph({ claims }: Props) {
         );
       })
       .on("mouseout", function (_, d) {
+        if (selectedIdRef.current === d.id) return;
         d3.select(this).transition().duration(150).attr("r", d.type === "claim" ? 14 : 9);
         link.attr("stroke", EDGE_COLOR);
+      })
+      .on("click", (event, d) => {
+        event.stopPropagation();
+        if (d.type !== "claim") return;
+
+        const isSame = selectedIdRef.current === d.id;
+        selectedIdRef.current = isSame ? null : d.id;
+
+        circles.transition().duration(200)
+          .attr("r", (n) => {
+            if (n.type === "concept") return 9;
+            return selectedIdRef.current === n.id ? 22 : 14;
+          })
+          .attr("stroke", (n) => selectedIdRef.current === n.id ? "white" : "none")
+          .attr("stroke-width", 2);
+
+        link.attr("stroke", EDGE_COLOR);
+        setSelectedRef.current(isSame ? null : (claimMapRef.current.get(d.id) ?? null));
       })
       .transition().duration(600).delay((_, i) => i * 40)
       .attr("opacity", 0.9);
@@ -204,9 +249,6 @@ export default function RiskGraph({ claims }: Props) {
       .attr("fill", "rgba(148,163,184,0.7)")
       .attr("pointer-events", "none");
 
-    nodeGroup.append("title")
-      .text((d) => d.label);
-
     simulation.on("tick", () => {
       link
         .attr("x1", (d) => (d.source as SimNode).x ?? 0)
@@ -221,6 +263,20 @@ export default function RiskGraph({ claims }: Props) {
 
   if (claims.length === 0) return null;
 
+  const riskPercent = selectedClaim ? Math.round(selectedClaim.risk_score * 100) : 0;
+  const riskLabel = selectedClaim
+    ? selectedClaim.risk_score > 0.7 ? "High Risk"
+      : selectedClaim.risk_score > 0.4 ? "Needs Review"
+      : "Likely OK"
+    : "";
+  const riskBadgeColor = selectedClaim
+    ? selectedClaim.risk_score > 0.7
+      ? "bg-[#f87171]/20 text-[#f87171] border-[#f87171]/30"
+      : selectedClaim.risk_score > 0.4
+        ? "bg-[#fb923c]/20 text-[#fb923c] border-[#fb923c]/30"
+        : "bg-[#4ade80]/20 text-[#4ade80] border-[#4ade80]/30"
+    : "";
+
   return (
     <div className="rounded-xl overflow-hidden border border-vellum animate-fade-in" ref={containerRef}>
       <div className="bg-slate-950 px-5 py-2.5 border-b border-white/5">
@@ -228,7 +284,53 @@ export default function RiskGraph({ claims }: Props) {
           Claim Risk Map
         </span>
       </div>
+
       <svg ref={svgRef} className="w-full block" style={{ minHeight: 380 }} />
+
+      {/* Selected claim detail panel */}
+      {selectedClaim && (
+        <div className="bg-slate-900 border-t border-white/10 px-5 py-4 animate-fade-in">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-slate-400 tabular-nums">
+                R{claims.findIndex((c) => c.claim_id === selectedClaim.claim_id) + 1}
+              </span>
+              <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${riskBadgeColor}`}>
+                <AlertTriangle className="h-3 w-3" />
+                {riskLabel} · {riskPercent}%
+              </span>
+            </div>
+            <button
+              onClick={() => { selectedIdRef.current = null; setSelectedClaim(null); }}
+              className="shrink-0 rounded-md p-1 text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <p className="text-sm leading-relaxed text-slate-200 mb-3">
+            &ldquo;{selectedClaim.original_text}&rdquo;
+          </p>
+
+          {selectedClaim.risk_signals.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {selectedClaim.risk_signals.map((sig) => (
+                <span
+                  key={sig}
+                  className="rounded-md bg-white/5 border border-white/10 px-2 py-0.5 text-[11px] font-medium text-slate-400"
+                >
+                  {SIGNAL_LABELS[sig] ?? sig}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <p className="text-xs text-slate-400 leading-relaxed">
+            {selectedClaim.summary_verdict}
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-4 bg-slate-950 px-5 py-3 border-t border-white/5">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Legend</span>
         <div className="flex items-center gap-1.5">
@@ -247,7 +349,7 @@ export default function RiskGraph({ claims }: Props) {
           <div className="h-2.5 w-2.5 rounded-full bg-[#60a5fa]" />
           <span className="text-[10px] text-slate-400">Concept</span>
         </div>
-        <span className="ml-auto text-[10px] text-slate-600">Drag · Scroll to zoom · Hover for details</span>
+        <span className="ml-auto text-[10px] text-slate-600">Click claim · Drag · Scroll to zoom</span>
       </div>
     </div>
   );
