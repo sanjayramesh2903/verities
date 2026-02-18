@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:shared": "npm --prefix ../shared run build",
     "preview": "vite preview"
   },
   "dependencies": {
