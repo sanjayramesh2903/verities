@@ -5,12 +5,11 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@verities/shared": ["../shared/dist/index.d.ts"]
+      "@verities/shared": ["../shared/src/index.ts"]
     }
   },
   "include": ["src"],
   "references": [
-    { "path": "./tsconfig.node.json" },
-    { "path": "../shared" }
+    { "path": "./tsconfig.node.json" }
   ]
 }

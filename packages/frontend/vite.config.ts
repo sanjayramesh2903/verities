@@ -4,6 +4,11 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@verities/shared": new URL("../shared/src/index.ts", import.meta.url).pathname,
+    },
+  },
   server: {
     port: 5173,
     proxy: {
