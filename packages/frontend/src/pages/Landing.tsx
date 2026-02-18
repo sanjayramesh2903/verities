@@ -50,12 +50,28 @@ export default function Landing() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 dot-grid opacity-40" />
-        <div className="relative mx-auto max-w-5xl px-4 pb-20 pt-24 sm:px-6 text-center">
+        {/* Animated gradient background */}
+        <div
+          className="absolute inset-0 animate-gradient opacity-15"
+          style={{
+            background: "linear-gradient(135deg, #2563EB, #DC2626, #16A34A, #2563EB)",
+          }}
+        />
+        <div className="absolute inset-0 dot-grid opacity-30" />
+
+        <div className="relative mx-auto max-w-5xl px-4 pb-24 pt-28 sm:px-6 text-center">
           <div className="animate-rise">
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-cerulean shadow-lg shadow-cerulean/20">
+            {/* Floating icon */}
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-cerulean shadow-xl shadow-cerulean/30 cursor-default animate-float">
               <Shield className="h-8 w-8 text-white" />
             </div>
+
+            {/* Badge */}
+            <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-cerulean/20 bg-cerulean-wash px-4 py-1.5 animate-pop-in delay-75">
+              <Sparkles className="h-3.5 w-3.5 text-cerulean" />
+              <span className="text-xs font-semibold text-cerulean">AI-Powered Fact Checking</span>
+            </div>
+
             <h1 className="font-display text-4xl font-bold leading-tight text-ink sm:text-5xl lg:text-6xl">
               Verify the facts<br />
               <span className="text-cerulean">in your writing</span>
@@ -66,10 +82,10 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center animate-rise delay-150">
+          <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center animate-rise delay-200">
             <Link
               to="/check"
-              className="inline-flex items-center gap-2 rounded-xl bg-cerulean px-6 py-3 text-sm font-semibold text-white shadow-md shadow-cerulean/20 transition-all hover:bg-cerulean-light hover:shadow-lg hover:shadow-cerulean/30"
+              className="inline-flex items-center gap-2 rounded-xl bg-cerulean px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-cerulean/30 transition-all hover:bg-cerulean-light hover:shadow-xl hover:shadow-cerulean/40 hover:-translate-y-0.5 animate-pulse-ring"
             >
               <Search className="h-4 w-4" />
               Check Facts
@@ -77,11 +93,30 @@ export default function Landing() {
             </Link>
             <Link
               to="/review"
-              className="inline-flex items-center gap-2 rounded-xl border border-vellum bg-white px-6 py-3 text-sm font-semibold text-ink transition-all hover:border-stone hover:shadow-md"
+              className="inline-flex items-center gap-2 rounded-xl border border-vellum bg-white/80 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-ink transition-all hover:border-cerulean/30 hover:shadow-md hover:-translate-y-0.5"
             >
               <FileText className="h-4 w-4" />
               Review Document
             </Link>
+          </div>
+
+          {/* Floating stat pills */}
+          <div className="mt-12 flex flex-wrap justify-center gap-3 animate-fade-in delay-400">
+            {[
+              { label: "Claims checked", value: "100%" },
+              { label: "Citation formats", value: "MLA · APA · Chicago" },
+              { label: "Source tiers", value: "4 levels" },
+            ].map((pill, i) => (
+              <div
+                key={i}
+                className="rounded-full border border-vellum bg-white/70 backdrop-blur-sm px-4 py-1.5 text-xs font-medium text-ink-muted animate-fade-up"
+                style={{ animationDelay: `${400 + i * 80}ms` }}
+              >
+                <span className="font-semibold text-ink">{pill.value}</span>
+                {" · "}
+                {pill.label}
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -144,6 +179,32 @@ export default function Landing() {
           </p>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-vellum">
+        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-cerulean" />
+              <span className="text-sm font-semibold text-ink">Verities</span>
+            </div>
+            <div className="flex items-center gap-6">
+              <Link to="/about" className="text-xs text-ink-faint hover:text-ink transition-colors">
+                About
+              </Link>
+              <Link to="/check" className="text-xs text-ink-faint hover:text-ink transition-colors">
+                Check Facts
+              </Link>
+              <Link to="/review" className="text-xs text-ink-faint hover:text-ink transition-colors">
+                Review Document
+              </Link>
+            </div>
+            <p className="text-xs text-ink-ghost">
+              © {new Date().getFullYear()} Verities
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

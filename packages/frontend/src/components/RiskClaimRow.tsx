@@ -32,10 +32,17 @@ export default function RiskClaimRow({ claim, index, onClick }: RiskClaimRowProp
         ? "bg-amber-wash"
         : "bg-sage-wash";
 
+  const riskBorderClass =
+    claim.risk_score > 0.7
+      ? "risk-card-high"
+      : claim.risk_score > 0.4
+        ? "risk-card-medium"
+        : "risk-card-low";
+
   return (
     <button
       onClick={onClick}
-      className="scholarly-card w-full animate-slide-up p-4 text-left transition-all hover:bg-parchment/50"
+      className={`scholarly-card w-full animate-slide-up p-4 text-left transition-all hover:bg-parchment/50 hover:-translate-y-px hover:shadow-md ${riskBorderClass}`}
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <div className="flex items-start gap-3">
@@ -60,8 +67,8 @@ export default function RiskClaimRow({ claim, index, onClick }: RiskClaimRowProp
           <div className="mt-2 flex items-center gap-3">
             <div className={`h-1.5 flex-1 rounded-full ${riskTrack} overflow-hidden`}>
               <div
-                className={`h-full rounded-full ${riskColor} transition-all`}
-                style={{ width: `${riskPercent}%` }}
+                className={`h-full rounded-full ${riskColor} transition-all duration-700`}
+                style={{ width: `${riskPercent}%`, transitionDelay: `${index * 60 + 300}ms` }}
               />
             </div>
             <span className="shrink-0 text-[11px] font-semibold text-ink-faint tabular-nums">
