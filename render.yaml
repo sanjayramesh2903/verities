@@ -3,7 +3,7 @@ services:
     name: verities-api
     runtime: node
     region: oregon
-    buildCommand: npm install && npm run build:shared && cd packages/backend && npx prisma generate && npx prisma db push --accept-data-loss && npm run build
+    buildCommand: npm install && cd packages/backend && npx prisma generate && npx prisma db push --accept-data-loss && npm run build
     startCommand: cd packages/backend && node dist/server.js
     envVars:
       - key: NODE_ENV
