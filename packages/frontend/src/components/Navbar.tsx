@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { BookOpen, Search, FileText, History, Info, LogIn, LogOut } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -5,6 +6,13 @@ import { useAuth } from "../contexts/AuthContext";
 export default function Navbar() {
   const { pathname } = useLocation();
   const { user, loading, login, logout } = useAuth();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const linkClass = (path: string) =>
     `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -18,7 +26,9 @@ export default function Navbar() {
     : user?.email?.[0]?.toUpperCase() ?? "?";
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-vellum bg-ivory/80 backdrop-blur-md">
+    <nav className={`sticky top-0 z-50 transition-all duration-300 ${
+      scrolled ? "navbar-glass shadow-sm" : "bg-ivory border-b border-vellum"
+    }`}>
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
