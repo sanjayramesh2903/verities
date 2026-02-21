@@ -85,7 +85,7 @@ async function callWithFallback(
         return await callGroq(model, system, userMessage, timeoutMs);
       } catch (err) {
         const msg = (err as Error).message;
-        lastErrors.push(`${model.split("/")[1]}: ${msg}`);
+        lastErrors.push(`${model}: ${msg}`);
         console.warn(`Model ${model} failed: ${msg}`);
       }
     }

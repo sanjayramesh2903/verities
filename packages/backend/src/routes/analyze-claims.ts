@@ -33,7 +33,16 @@ async function processClaim(
 
   if (cache) {
     const cached = await cache.get(claimCacheKey).catch(() => null) as Claim | null;
-    if (cached) return cached;
+    if (cached) {
+      // Re-derive position fields from the current request's text so one user's
+      // original_text / span never leaks into another user's response.
+      return {
+        ...cached,
+        claim_id: randomUUID(),
+        original_text: getOriginalText(ec, text),
+        span: { start: ec.span_start ?? 0, end: ec.span_end ?? 0 },
+      };
+    }
   }
 
   const rawResults = await searchForClaim(claimText, cache);
