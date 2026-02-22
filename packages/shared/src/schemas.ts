@@ -95,11 +95,18 @@ export const FormatCitationResponseSchema = z.object({
 
 // ── LLM Internal Schemas ──
 
+// LLMs occasionally return numbers/dates as bare JSON numbers instead of strings.
+// Accept both and coerce to string to avoid Zod validation failures.
+const coercedString = z.union([
+  z.string(),
+  z.number().transform((n) => String(n)),
+]).nullable().default(null);
+
 export const ExtractedClaimSchema = z.object({
   subject: z.string(),
   predicate: z.string(),
-  numbers: z.string().nullable().default(null),
-  dates: z.string().nullable().default(null),
+  numbers: coercedString,
+  dates: coercedString,
   original_text: z.string(),
   span_start: z.number().optional().default(0),
   span_end: z.number().optional().default(0),
