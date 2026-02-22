@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Search, FileText, History, LogOut } from "lucide-react";
+import { Search, FileText, History, LogOut, Info } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Navbar() {
@@ -13,8 +13,6 @@ export default function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  const isLanding = pathname === "/";
 
   const linkClass = (path: string) =>
     `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -30,9 +28,7 @@ export default function Navbar() {
   return (
     <nav
       className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled && !isLanding
-          ? "shadow-lg shadow-navy/20"
-          : ""
+        scrolled ? "shadow-lg shadow-navy/20" : ""
       } bg-navy`}
     >
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
@@ -46,33 +42,24 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Nav links */}
+        {/* Nav links — consistent on every page */}
         <div className="flex items-center gap-1">
-          {isLanding ? (
-            <>
-              <Link to="/check" className="px-3 py-1.5 text-sm font-medium text-white/70 hover:text-white transition-colors">
-                Pricing
-              </Link>
-              <Link to="/about" className="px-3 py-1.5 text-sm font-medium text-white/70 hover:text-white transition-colors">
-                Contact Us
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link to="/check" className={linkClass("/check")}>
-                <Search className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Check Facts</span>
-              </Link>
-              <Link to="/review" className={linkClass("/review")}>
-                <FileText className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Review</span>
-              </Link>
-              <Link to="/history" className={linkClass("/history")}>
-                <History className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">History</span>
-              </Link>
-            </>
-          )}
+          <Link to="/check" className={linkClass("/check")}>
+            <Search className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Check Facts</span>
+          </Link>
+          <Link to="/review" className={linkClass("/review")}>
+            <FileText className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Review</span>
+          </Link>
+          <Link to="/history" className={linkClass("/history")}>
+            <History className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">History</span>
+          </Link>
+          <Link to="/about" className={linkClass("/about")}>
+            <Info className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">About</span>
+          </Link>
         </div>
 
         {/* Auth */}
