@@ -1,69 +1,89 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── The Scholar's Lens palette ── */
-  --color-ivory: #FAFAF7;
-  --color-parchment: #F3F1EC;
-  --color-vellum: #EBE8E1;
-  --color-linen: #E2DFD6;
-  --color-stone: #D4D0C8;
+  /* ─── Core Navy + White ─────────────────────────────────────── */
+  --color-navy:          #1B2B5B;
+  --color-navy-light:    #2A3F7E;
+  --color-navy-dark:     #0F1B3D;
+  --color-navy-muted:    #3D5499;
 
-  --color-ink: #1A1A2E;
-  --color-ink-light: #2D2D44;
-  --color-ink-muted: #6B6B80;
-  --color-ink-faint: #9B9BAD;
-  --color-ink-ghost: #C8C8D4;
+  --color-white:         #FFFFFF;
+  --color-surface:       #F8FAFC;
+  --color-surface-2:     #F1F5F9;
+  --color-border:        #E2E8F0;
+  --color-border-strong: #CBD5E1;
 
-  --color-cerulean: #2563EB;
-  --color-cerulean-light: #3B82F6;
-  --color-cerulean-wash: rgba(37, 99, 235, 0.06);
-  --color-cerulean-glow: rgba(37, 99, 235, 0.12);
+  /* ─── Accent Colors ─────────────────────────────────────────── */
+  --color-gold:          #F5A623;
+  --color-gold-light:    #F7B84B;
+  --color-gold-dark:     #D4891F;
 
-  --color-sage: #16A34A;
-  --color-sage-wash: rgba(22, 163, 74, 0.07);
-  --color-sage-border: rgba(22, 163, 74, 0.2);
+  --color-teal:          #0D9488;
+  --color-teal-light:    #14B8A6;
 
-  --color-amber: #D97706;
-  --color-amber-wash: rgba(217, 119, 6, 0.07);
-  --color-amber-border: rgba(217, 119, 6, 0.2);
+  --color-rose:          #F43F5E;
+  --color-rose-light:    #FB7185;
 
-  --color-terracotta: #DC2626;
-  --color-terracotta-wash: rgba(220, 38, 38, 0.06);
-  --color-terracotta-border: rgba(220, 38, 38, 0.18);
+  --color-amber:         #F59E0B;
+  --color-green:         #10B981;
 
-  --color-slate: #64748B;
-  --color-slate-wash: rgba(100, 116, 139, 0.07);
-  --color-slate-border: rgba(100, 116, 139, 0.2);
+  /* ─── Text ──────────────────────────────────────────────────── */
+  --color-ink:           #0F172A;
+  --color-ink-muted:     #475569;
+  --color-ink-faint:     #94A3B8;
 
-  --color-navy: #0F1B4D;
-  --color-navy-light: #1A2B6B;
-  --color-navy-mid: #172358;
-  --color-navy-wash: rgba(15, 27, 77, 0.07);
+  /* ─── Verdict ───────────────────────────────────────────────── */
+  --color-supported:     #10B981;
+  --color-contested:     #F59E0B;
+  --color-refuted:       #F43F5E;
+  --color-unclear:       #94A3B8;
 
-  /* ── Typography ── */
-  --font-display: "Newsreader", "Georgia", serif;
-  --font-body: "Source Sans 3", "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --font-sans: "Source Sans 3", "Segoe UI", sans-serif;
+  /* ─── Typography ────────────────────────────────────────────── */
+  --font-display: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-body:    "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", "Fira Code", monospace;
 }
 
 /* ── Base ── */
 html {
   scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
+  @apply bg-white text-ink;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   font-family: var(--font-body);
-  color: var(--color-ink);
-  background: var(--color-ivory);
 }
 
 ::selection {
-  background: rgba(37, 99, 235, 0.15);
+  background: rgba(27, 43, 91, 0.15);
   color: var(--color-ink);
 }
+
+/* ─── Cards ─────────────────────────────────────────────────── */
+.card {
+  @apply bg-white border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200;
+}
+
+/* ─── Buttons ───────────────────────────────────────────────── */
+.btn-primary {
+  @apply bg-navy text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-navy-light active:bg-navy-dark transition-colors duration-150 shadow-sm cursor-pointer;
+}
+
+.btn-gold {
+  @apply bg-gold text-navy font-bold px-5 py-2.5 rounded-lg hover:bg-gold-light active:bg-gold-dark transition-colors duration-150 shadow-sm cursor-pointer;
+}
+
+.btn-outline {
+  @apply border-2 border-navy text-navy font-semibold px-5 py-2.5 rounded-lg hover:bg-navy hover:text-white transition-colors duration-150 cursor-pointer;
+}
+
+/* ─── Verdict annotations ────────────────────────────────────── */
+.annotation-supported { @apply border-l-4 border-supported bg-green/5; }
+.annotation-contested  { @apply border-l-4 border-contested  bg-amber/5; }
+.annotation-refuted    { @apply border-l-4 border-refuted    bg-rose/5; }
+.annotation-unclear    { @apply border-l-4 border-unclear    bg-surface; }
 
 /* ── Keyframes ── */
 @keyframes rise {
@@ -137,51 +157,47 @@ body {
 .delay-500 { animation-delay: 500ms; }
 .delay-600 { animation-delay: 600ms; }
 
-/* ── Scholarly card ── */
+/* ── Scholarly card (legacy alias → card) ── */
 .scholarly-card {
   background: white;
-  border: 1px solid var(--color-vellum);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .scholarly-card:hover {
-  border-color: var(--color-stone);
-  box-shadow: 0 4px 24px rgba(26, 26, 46, 0.06);
+  border-color: var(--color-border-strong);
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
 }
 
 /* ── Claim annotation card — left border accent ── */
 .annotation-card {
   background: white;
-  border: 1px solid var(--color-vellum);
-  border-left: 3px solid var(--color-cerulean);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-navy);
   border-radius: 2px 12px 12px 2px;
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .annotation-card:hover {
-  box-shadow: 0 4px 24px rgba(26, 26, 46, 0.06);
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
 }
 
-.annotation-card[data-verdict="broadly_supported"] { border-left-color: var(--color-sage); }
-.annotation-card[data-verdict="overstated"] { border-left-color: var(--color-amber); }
-.annotation-card[data-verdict="disputed"] { border-left-color: var(--color-terracotta); }
-.annotation-card[data-verdict="unclear"] { border-left-color: var(--color-slate); }
+.annotation-card[data-verdict="broadly_supported"] { border-left-color: var(--color-supported); }
+.annotation-card[data-verdict="overstated"] { border-left-color: var(--color-contested); }
+.annotation-card[data-verdict="disputed"] { border-left-color: var(--color-refuted); }
+.annotation-card[data-verdict="unclear"] { border-left-color: var(--color-unclear); }
 
-/* ── Manuscript text area ── */
+/* ─── Input ─────────────────────────────────────────────────── */
 .manuscript-input {
-  background: white;
-  border: 1px solid var(--color-vellum);
-  border-radius: 12px;
-  font-family: var(--font-body);
-  line-height: 1.8;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  @apply w-full bg-surface border border-border-strong rounded-xl p-4 text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-navy/40 focus:border-navy transition-all duration-200 font-mono text-sm leading-relaxed resize-none;
 }
 
-.manuscript-input:focus {
-  outline: none;
-  border-color: var(--color-cerulean);
-  box-shadow: 0 0 0 3px var(--color-cerulean-wash);
+/* ─── Hero gradient animation ───────────────────────────────── */
+.hero-gradient {
+  background: linear-gradient(135deg, #1B2B5B 0%, #2A3F7E 25%, #0D9488 50%, #1B2B5B 75%, #0F1B3D 100%);
+  background-size: 300% 300%;
+  animation: gradient-shift 12s ease infinite;
 }
 
 /* ── Paper texture subtle overlay ── */

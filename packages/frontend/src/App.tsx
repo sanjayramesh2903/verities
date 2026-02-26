@@ -1,5 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Eagerly loaded
 import Landing from "./pages/Landing";
@@ -11,6 +13,8 @@ const History = lazy(() => import("./pages/History"));
 const HistoryDetail = lazy(() => import("./pages/HistoryDetail"));
 const Profile = lazy(() => import("./pages/Profile"));
 const About = lazy(() => import("./pages/About"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const SharedReport = lazy(() => import("./pages/SharedReport"));
 
 function PageLoader() {
   return (
@@ -22,16 +26,21 @@ function PageLoader() {
 
 export default function App() {
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/check" element={<CheckFacts />} />
-        <Route path="/review" element={<ReviewDocument />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/history/:id" element={<HistoryDetail />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/about" element={<About />} />
-      </Routes>
-    </Suspense>
+    <ErrorBoundary>
+      <Toaster richColors position="top-right" />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/check" element={<CheckFacts />} />
+          <Route path="/review" element={<ReviewDocument />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/history/:id" element={<HistoryDetail />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/report/:shareToken" element={<SharedReport />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }

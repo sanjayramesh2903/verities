@@ -26,6 +26,7 @@ export default function Navbar() {
     : user?.email?.[0]?.toUpperCase() ?? "?";
 
   return (
+    <>
     <nav
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled ? "shadow-lg shadow-navy/20" : ""
@@ -108,5 +109,6 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+    </>
   );
 }

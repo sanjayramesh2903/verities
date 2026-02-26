@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Search, BookOpen, Sparkles, Shield } from "lucide-react";
+import { ArrowRight, CheckCircle2, Search, BookOpen, Sparkles, Shield, Clock, FileText, TrendingUp } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { getHistory, getUsage, type CheckSummary, type UsageData } from "../lib/api";
 import Navbar from "../components/Navbar";
 
 const stats = [
@@ -52,7 +55,194 @@ const features = [
   },
 ];
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function LoggedInDashboard({ user }: { user: { displayName: string | null; email: string } }) {
+  const [recentChecks, setRecentChecks] = useState<CheckSummary[]>([]);
+  const [usage, setUsage] = useState<UsageData | null>(null);
+
+  useEffect(() => {
+    getHistory(3, 0).then((res) => setRecentChecks(res.checks)).catch(() => {});
+    getUsage().then(setUsage).catch(() => {});
+  }, []);
+
+  const name = user.displayName ?? user.email.split("@")[0];
+  const checksRemaining = usage && usage.planTier === "free"
+    ? Math.max(0, usage.checksLimit - usage.checksUsed)
+    : null;
+
+  return (
+    <div className="min-h-screen bg-ivory">
+      <Navbar />
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+
+        {/* Welcome header */}
+        <div className="mb-8 animate-rise">
+          <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">
+            Welcome back, {name}.
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">What would you like to check today?</p>
+        </div>
+
+        {/* Quick actions */}
+        <div className="grid gap-4 sm:grid-cols-2 mb-8">
+          <Link
+            to="/check"
+            className="scholarly-card p-6 flex items-start gap-4 hover:shadow-md transition-shadow group animate-rise"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cerulean-wash">
+              <Search className="h-5 w-5 text-cerulean" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-ink group-hover:text-cerulean transition-colors">Check Facts</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">Verify claims in an essay or article with source citations</p>
+            </div>
+            <ArrowRight className="ml-auto h-4 w-4 text-ink-ghost group-hover:text-cerulean transition-colors self-center" />
+          </Link>
+
+          <Link
+            to="/review"
+            className="scholarly-card p-6 flex items-start gap-4 hover:shadow-md transition-shadow group animate-rise delay-75"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-parchment">
+              <FileText className="h-5 w-5 text-ink-muted" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-ink group-hover:text-cerulean transition-colors">Review Document</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">Scan an entire document for high-risk factual claims</p>
+            </div>
+            <ArrowRight className="ml-auto h-4 w-4 text-ink-ghost group-hover:text-cerulean transition-colors self-center" />
+          </Link>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-3">
+          {/* Recent activity */}
+          <div className="sm:col-span-2 animate-rise delay-100">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-ink-muted" />
+                <h2 className="text-sm font-semibold text-ink">Recent Checks</h2>
+              </div>
+              <Link to="/history" className="text-xs text-cerulean hover:underline">View all</Link>
+            </div>
+
+            {recentChecks.length === 0 ? (
+              <div className="scholarly-card p-6 text-center">
+                <p className="text-sm text-ink-muted">No checks yet — start by checking your first text above.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {recentChecks.map((check) => (
+                  <Link
+                    key={check.id}
+                    to={`/history/${check.id}`}
+                    className="scholarly-card p-4 flex items-center gap-3 hover:shadow-sm transition-shadow group"
+                  >
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0 ${
+                      check.type === "analyze"
+                        ? "bg-cerulean-wash text-cerulean"
+                        : "bg-parchment text-ink-muted"
+                    }`}>
+                      {check.type === "analyze" ? "Fact" : "Review"}
+                    </span>
+                    <span className="flex-1 text-xs text-ink truncate group-hover:text-cerulean transition-colors">
+                      {check.inputSnippet}
+                    </span>
+                    <span className="text-[10px] text-ink-ghost shrink-0">{formatDate(check.createdAt)}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Usage sidebar */}
+          {usage && (
+            <div className="animate-rise delay-150">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="h-4 w-4 text-ink-muted" />
+                <h2 className="text-sm font-semibold text-ink">Usage</h2>
+              </div>
+              <div className="scholarly-card p-4 space-y-4">
+                {/* Plan badge */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-ink-muted">Plan</span>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    usage.planTier === "pro"
+                      ? "bg-navy text-white"
+                      : "bg-parchment text-ink-muted"
+                  }`}>
+                    {usage.planTier === "pro" ? "Pro" : "Free"}
+                  </span>
+                </div>
+
+                {/* Checks progress */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-ink-muted">Fact-checks</span>
+                    <span className="text-xs font-medium text-ink">
+                      {usage.checksUsed}/{usage.checksLimit}
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-parchment overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-cerulean transition-all"
+                      style={{ width: `${Math.min(100, (usage.checksUsed / usage.checksLimit) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Reviews progress (free only) */}
+                {usage.reviewsLimit !== null && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-ink-muted">Reviews</span>
+                      <span className="text-xs font-medium text-ink">
+                        {usage.reviewsUsed}/{usage.reviewsLimit}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-parchment overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-cerulean transition-all"
+                        style={{ width: `${Math.min(100, (usage.reviewsUsed / usage.reviewsLimit) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {usage.planTier === "free" && checksRemaining === 0 && (
+                  <Link
+                    to="/pricing"
+                    className="block w-full text-center rounded-lg bg-navy px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-navy-light"
+                  >
+                    Upgrade to Pro
+                  </Link>
+                )}
+                {usage.planTier === "free" && checksRemaining !== null && checksRemaining > 0 && (
+                  <Link
+                    to="/pricing"
+                    className="block text-center text-xs text-cerulean hover:underline"
+                  >
+                    See Pro plans →
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing() {
+  const { user } = useAuth();
+
+  if (user) {
+    return <LoggedInDashboard user={user} />;
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -252,6 +442,7 @@ export default function Landing() {
               <Link to="/about" className="text-xs text-white/40 hover:text-white/70 transition-colors">About</Link>
               <Link to="/check" className="text-xs text-white/40 hover:text-white/70 transition-colors">Check Facts</Link>
               <Link to="/review" className="text-xs text-white/40 hover:text-white/70 transition-colors">Review Document</Link>
+              <Link to="/pricing" className="text-xs text-white/40 hover:text-white/70 transition-colors">Pricing</Link>
             </div>
             <p className="text-xs text-white/25">© {new Date().getFullYear()} Verities</p>
           </div>

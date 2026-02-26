@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Search, AlertCircle, RefreshCw, Info, GitFork } from "lucide-react";
+import { useSearchParams, Link } from "react-router-dom";
+import { Search, AlertCircle, RefreshCw, Info, GitFork, TrendingUp } from "lucide-react";
 import { LIMITS } from "@verities/shared";
 import type { Claim, CitationStyle } from "@verities/shared";
-import { analyzeClaimsStream } from "../lib/api";
+import { analyzeClaimsStream, getUsage, type UsageData } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import ClaimCard from "../components/ClaimCard";
+import UpgradeModal from "../components/UpgradeModal";
 
 const ConceptGraph = lazy(() => import("../components/ConceptGraph"));
 
@@ -21,6 +23,16 @@ export default function CheckFacts() {
   const [totalClaims, setTotalClaims] = useState(0);
   const [processingTimeMs, setProcessingTimeMs] = useState(0);
   const [error, setError] = useState("");
+  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const { user } = useAuth();
+
+  // Fetch usage quota when user is logged in
+  useEffect(() => {
+    if (user) {
+      getUsage().then(setUsage).catch(() => {});
+    }
+  }, [user]);
 
   // Auto-submit if navigated here with ?text= param (e.g. from Review page)
   useEffect(() => {
@@ -52,6 +64,8 @@ export default function CheckFacts() {
           onDone(data) {
             setProcessingTimeMs(data.metadata.processing_time_ms);
             setStatus("success");
+            // Refresh usage after a successful check
+            if (user) getUsage().then(setUsage).catch(() => {});
           },
           onError(message) {
             setError(message);
@@ -60,16 +74,28 @@ export default function CheckFacts() {
         }
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-      setStatus("error");
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      // 402 = quota exceeded — open upgrade modal
+      if (msg.toLowerCase().includes("free tier") || msg.includes("402")) {
+        setShowUpgrade(true);
+        setStatus("idle");
+      } else {
+        setError(msg);
+        setStatus("error");
+      }
     }
-  }, [text, citationStyle]);
+  }, [text, citationStyle, user]);
 
   const handleUseRewrite = (span: { start: number; end: number }, rewriteText: string) => {
     setText((prev) => prev.slice(0, span.start) + rewriteText + prev.slice(span.end));
   };
 
   const isLoading = status === "extracting" || status === "streaming";
+
+  const checksRemaining = usage
+    ? Math.max(0, usage.checksLimit - usage.checksUsed)
+    : null;
+  const quotaExhausted = usage?.planTier === "free" && checksRemaining === 0;
 
   return (
     <div className="min-h-screen bg-ivory">
@@ -86,6 +112,30 @@ export default function CheckFacts() {
             ranked sources, and provide verdicts with citations.
           </p>
         </div>
+
+        {/* Usage indicator — only for logged-in free tier users */}
+        {usage && usage.planTier === "free" && (
+          <div className={`mb-5 flex items-center justify-between rounded-lg px-4 py-2.5 animate-rise ${
+            quotaExhausted
+              ? "bg-terracotta-wash border border-terracotta-border"
+              : "bg-parchment/60 border border-vellum"
+          }`}>
+            <div className="flex items-center gap-2">
+              <TrendingUp className={`h-3.5 w-3.5 ${quotaExhausted ? "text-terracotta" : "text-ink-muted"}`} />
+              <span className={`text-xs font-medium ${quotaExhausted ? "text-terracotta" : "text-ink-muted"}`}>
+                {quotaExhausted
+                  ? "You've used all free fact-checks this month"
+                  : `${checksRemaining} of ${usage.checksLimit} fact-checks remaining this month`}
+              </span>
+            </div>
+            <Link
+              to="/pricing"
+              className="text-xs font-semibold text-cerulean hover:underline"
+            >
+              {quotaExhausted ? "Upgrade to continue" : "Upgrade"}
+            </Link>
+          </div>
+        )}
 
         {/* Input area */}
         <div className="space-y-4 animate-rise delay-100">
@@ -116,18 +166,27 @@ export default function CheckFacts() {
               <span className="text-xs text-ink-faint">
                 {text.length}/{LIMITS.ANALYZE_MAX_CHARS}
               </span>
-              <button
-                onClick={handleSubmit}
-                disabled={!text.trim() || isLoading}
-                className="inline-flex items-center gap-2 rounded-xl bg-cerulean px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-cerulean/20 transition-all hover:bg-cerulean-light disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
-              >
-                {isLoading ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-                {isLoading ? "Checking..." : "Check facts"}
-              </button>
+              {quotaExhausted ? (
+                <button
+                  onClick={() => setShowUpgrade(true)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-navy px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-navy-light"
+                >
+                  Upgrade to continue
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={!text.trim() || isLoading}
+                  className="inline-flex items-center gap-2 rounded-xl bg-cerulean px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-cerulean/20 transition-all hover:bg-cerulean-light disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                >
+                  {isLoading ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                  {isLoading ? "Checking..." : "Check facts"}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -271,6 +330,8 @@ export default function CheckFacts() {
           </p>
         </div>
       </div>
+
+      <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} />
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, GitFork } from "lucide-react";
+import { ArrowLeft, GitFork, Share2, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import type { Claim } from "@verities/shared";
-import { getHistoryById } from "../lib/api";
+import { getHistoryById, getShareLink } from "../lib/api";
 import Navbar from "../components/Navbar";
 import ClaimCard from "../components/ClaimCard";
 
@@ -20,6 +21,8 @@ export default function HistoryDetail() {
   const [meta, setMeta] = useState<{ type: string; inputSnippet: string; claimCount: number; createdAt: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sharing, setSharing] = useState(false);
+  const [shared, setShared] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -40,6 +43,22 @@ export default function HistoryDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const handleShare = async () => {
+    if (!id) return;
+    setSharing(true);
+    try {
+      const { shareUrl } = await getShareLink(id);
+      await navigator.clipboard.writeText(shareUrl);
+      setShared(true);
+      toast.success("Share link copied to clipboard!");
+      setTimeout(() => setShared(false), 3000);
+    } catch {
+      toast.error("Could not create share link. Please try again.");
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const handleUseRewrite = (span: { start: number; end: number }, _text: string) => {
     // In history view, rewrites are for reference only (no active editor)
     void span;
@@ -49,13 +68,33 @@ export default function HistoryDetail() {
     <div className="min-h-screen bg-ivory">
       <Navbar />
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-        <Link
-          to="/history"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to History
-        </Link>
+        <div className="mb-6 flex items-center justify-between">
+          <Link
+            to="/history"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to History
+          </Link>
+
+          {/* Share button — only shown once loaded */}
+          {!loading && !error && meta?.type === "analyze" && (
+            <button
+              onClick={handleShare}
+              disabled={sharing}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-vellum bg-white px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:border-stone hover:text-ink disabled:opacity-50"
+            >
+              {sharing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : shared ? (
+                <Check className="h-3.5 w-3.5 text-sage" />
+              ) : (
+                <Share2 className="h-3.5 w-3.5" />
+              )}
+              {shared ? "Copied!" : "Share"}
+            </button>
+          )}
+        </div>
 
         {loading ? (
           <div className="space-y-4 mt-4">

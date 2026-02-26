@@ -1,218 +1,196 @@
-import type {
-  AnalyzeClaimsRequest,
-  AnalyzeClaimsResponse,
-  ReviewDocumentRequest,
-  ReviewDocumentResponse,
-  FormatCitationRequest,
-  FormatCitationResponse,
-  Claim,
-} from "@verities/shared";
+import { supabase, FUNCTIONS_URL } from "./supabase";
 
-export const BASE = import.meta.env.VITE_API_URL ?? "/api";
-
-// ── Core helpers ─────────────────────────────────────────────────────────────
-
-async function post<TReq, TRes>(path: string, body: TReq): Promise<TRes> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? `Request failed: ${res.status}`);
+// ─── Auth header helper ───────────────────────────────────────────────────
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (session?.access_token) {
+    headers["Authorization"] = `Bearer ${session.access_token}`;
   }
-  return res.json();
+  return headers;
 }
 
-async function get<TRes>(path: string): Promise<TRes> {
-  const res = await fetch(`${BASE}${path}`, {
-    credentials: "include",
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? `Request failed: ${res.status}`);
-  }
-  return res.json();
-}
-
-async function put<TReq, TRes>(path: string, body: TReq): Promise<TRes> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? `Request failed: ${res.status}`);
-  }
-  return res.json();
-}
-
-// ── Analysis ─────────────────────────────────────────────────────────────────
-
-export function analyzeClaims(req: AnalyzeClaimsRequest): Promise<AnalyzeClaimsResponse> {
-  return post("/analyze-claims", req);
-}
-
-/** SSE streaming version — calls onClaim as each claim completes */
-export async function analyzeClaimsStream(
-  req: AnalyzeClaimsRequest,
-  callbacks: {
-    onExtraction?: (total: number) => void;
-    onClaim?: (index: number, claim: Claim) => void;
-    onDone?: (data: { request_id: string; metadata: AnalyzeClaimsResponse["metadata"] }) => void;
-    onError?: (message: string) => void;
-  }
-): Promise<void> {
-  const res = await fetch(`${BASE}/analyze-claims/stream`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(req),
+// ─── Generic fetch helper ─────────────────────────────────────────────────
+async function callFunction<T>(
+  name: string,
+  body?: unknown,
+  method = "POST"
+): Promise<T> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${FUNCTIONS_URL}/${name}`, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? `Request failed: ${res.status}`);
+    let errData: { error?: string; message?: string; status?: number } = {};
+    try {
+      errData = await res.json();
+    } catch {
+      errData = { error: res.statusText };
+    }
+    const err = Object.assign(
+      new Error(errData.message ?? errData.error ?? "Request failed"),
+      { status: res.status, data: errData }
+    );
+    throw err;
   }
 
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("No response body");
+  return res.json() as Promise<T>;
+}
 
+// ─── Auth ─────────────────────────────────────────────────────────────────
+export const getMe = () =>
+  callFunction<{
+    id: string;
+    email: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    planTier: string;
+  }>("me", undefined, "GET");
+
+// ─── Analyze Claims (SSE Streaming) ──────────────────────────────────────
+export async function analyzeClaimsStream(params: {
+  text: string;
+  citationStyle: string;
+  onExtraction: (total: number) => void;
+  onClaim: (index: number, claim: unknown) => void;
+  onDone: (metadata: unknown) => void;
+  onError: (msg: string) => void;
+  signal?: AbortSignal;
+}): Promise<void> {
+  const headers = await getAuthHeaders();
+  let res: Response;
+
+  try {
+    res = await fetch(`${FUNCTIONS_URL}/analyze-claims`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        text: params.text,
+        citationStyle: params.citationStyle,
+      }),
+      signal: params.signal,
+    });
+  } catch (err) {
+    if ((err as Error).name === "AbortError") return;
+    params.onError((err as Error).message);
+    return;
+  }
+
+  if (!res.ok) {
+    let errData: { error?: string; message?: string } = {};
+    try {
+      errData = await res.json();
+    } catch { /* ignore */ }
+    params.onError(
+      errData.error === "free_tier_limit"
+        ? "free_tier_limit"
+        : errData.message ?? "Analysis failed"
+    );
+    return;
+  }
+
+  const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-
     buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
 
-    let currentEvent = "";
-    for (const line of lines) {
-      if (line.startsWith("event: ")) {
-        currentEvent = line.slice(7);
-      } else if (line.startsWith("data: ")) {
-        try {
-          const data = JSON.parse(line.slice(6));
-          switch (currentEvent) {
-            case "extraction":
-              callbacks.onExtraction?.(data.total);
-              break;
-            case "claim":
-              callbacks.onClaim?.(data.index, data.claim);
-              break;
-            case "done":
-              callbacks.onDone?.(data);
-              break;
-            case "error":
-              callbacks.onError?.(data.message);
-              break;
-          }
-        } catch { /* skip malformed data */ }
-        currentEvent = "";
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+
+    for (const part of parts) {
+      if (!part.trim()) continue;
+      const lines = part.split("\n");
+      let event = "";
+      let data = "";
+      for (const line of lines) {
+        if (line.startsWith("event: ")) event = line.slice(7).trim();
+        else if (line.startsWith("data: ")) data = line.slice(6).trim();
       }
+      if (!data) continue;
+      try {
+        const parsed = JSON.parse(data);
+        if (event === "extraction") params.onExtraction(parsed.total);
+        else if (event === "claim") params.onClaim(parsed.index, parsed.claim);
+        else if (event === "done") params.onDone(parsed.metadata);
+        else if (event === "error") params.onError(parsed.message);
+      } catch { /* skip malformed events */ }
     }
   }
 }
 
-export function reviewDocument(req: ReviewDocumentRequest): Promise<ReviewDocumentResponse> {
-  return post("/review-document", req);
-}
+// ─── Review Document ──────────────────────────────────────────────────────
+export const reviewDocument = (text: string) =>
+  callFunction<{
+    request_id: string;
+    total_claims_found: number;
+    high_risk_claims: unknown[];
+    metadata: unknown;
+  }>("review-document", { text });
 
-export function formatCitation(req: FormatCitationRequest): Promise<FormatCitationResponse> {
-  return post("/format-citation", req);
-}
+// ─── History ─────────────────────────────────────────────────────────────
+export const getHistory = (limit = 20, offset = 0) =>
+  callFunction<{ checks: unknown[] }>(
+    `history?limit=${limit}&offset=${offset}`,
+    undefined,
+    "GET"
+  );
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+export const getHistoryById = (id: string) =>
+  callFunction<unknown>(`history?id=${encodeURIComponent(id)}`, undefined, "GET");
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-  createdAt: string | null;
-}
+// ─── Graph ────────────────────────────────────────────────────────────────
+export const getGraph = () =>
+  callFunction<{ topics: unknown[]; edges: unknown[] }>(
+    "graph",
+    undefined,
+    "GET"
+  );
 
-export function getMe(): Promise<AuthUser> {
-  return get("/auth/me");
-}
+// ─── Usage ────────────────────────────────────────────────────────────────
+export const getUsage = () =>
+  callFunction<{
+    plan_tier: string;
+    checks_used: number;
+    checks_limit: number;
+    reviews_used: number;
+    reviews_limit: number;
+    reset_at: string;
+  }>("usage", undefined, "GET");
 
-export async function logout(): Promise<void> {
-  await post("/auth/logout", {});
-}
+// ─── Preferences ─────────────────────────────────────────────────────────
+export const getPreferences = () =>
+  callFunction<{ citation_style: string; max_claims: number }>(
+    "preferences",
+    undefined,
+    "GET"
+  );
 
-// ── History ──────────────────────────────────────────────────────────────────
+export const updatePreferences = (prefs: {
+  citation_style?: string;
+  max_claims?: number;
+}) => callFunction("preferences", prefs, "PUT");
 
-export interface CheckSummary {
-  id: string;
-  type: "analyze" | "review";
-  inputSnippet: string;
-  claimCount: number;
-  createdAt: string;
-}
+// ─── Reports ─────────────────────────────────────────────────────────────
+export const getShareLink = (checkId: string) =>
+  callFunction<{ share_url: string; share_token: string; expires_at: string }>(
+    "reports",
+    { check_id: checkId }
+  );
 
-export interface HistoryResponse {
-  checks: CheckSummary[];
-  total: number;
-  offset: number;
-  limit: number;
-}
-
-export function getHistory(limit = 20, offset = 0): Promise<HistoryResponse> {
-  return get(`/history?limit=${limit}&offset=${offset}`);
-}
-
-export function getHistoryById(id: string): Promise<{
-  id: string;
-  type: string;
-  inputSnippet: string;
-  claimCount: number;
-  createdAt: string;
-  result: AnalyzeClaimsResponse;
-}> {
-  return get(`/history/${id}`);
-}
-
-// ── Preferences ──────────────────────────────────────────────────────────────
-
-export interface UserPreferences {
-  citationStyle: "mla" | "apa" | "chicago";
-  maxClaims: number;
-}
-
-export function getPreferences(): Promise<UserPreferences> {
-  return get("/preferences");
-}
-
-export function updatePreferences(prefs: Partial<UserPreferences>): Promise<UserPreferences> {
-  return put("/preferences", prefs);
-}
-
-// ── Graph ─────────────────────────────────────────────────────────────────────
-
-export interface GraphNode {
-  id: string;
-  label: string;
-  claimCount: number;
-}
-
-export interface GraphEdge {
-  source: string;
-  target: string;
-  weight: number;
-}
-
-export interface UserGraph {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-}
-
-export function getUserGraph(): Promise<UserGraph> {
-  return get("/graph");
-}
+export const getPublicReport = (token: string) =>
+  callFunction<unknown>(
+    `reports?token=${encodeURIComponent(token)}`,
+    undefined,
+    "GET"
+  );
