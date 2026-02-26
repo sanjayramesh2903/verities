@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Search, AlertCircle, RefreshCw, Info, GitFork, TrendingUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { LIMITS } from "@verities/shared";
 import type { Claim, CitationStyle } from "@verities/shared";
 import { analyzeClaimsStream, getUsage, type UsageData } from "../lib/api";
@@ -154,7 +155,7 @@ export default function CheckFacts() {
               <select
                 value={citationStyle}
                 onChange={(e) => setCitationStyle(e.target.value as CitationStyle)}
-                className="rounded-lg border border-vellum bg-white px-3 py-1.5 text-sm text-ink transition-colors hover:border-stone focus:border-cerulean focus:outline-none focus:ring-2 focus:ring-cerulean-wash"
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-ink transition-colors hover:border-border focus:border-cerulean focus:outline-none focus:ring-2 focus:ring-cerulean-wash"
               >
                 <option value="mla">MLA</option>
                 <option value="apa">APA</option>
@@ -177,7 +178,9 @@ export default function CheckFacts() {
                 <button
                   onClick={handleSubmit}
                   disabled={!text.trim() || isLoading}
-                  className="inline-flex items-center gap-2 rounded-xl bg-cerulean px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-cerulean/20 transition-all hover:bg-cerulean-light disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                  className={`inline-flex items-center gap-2 rounded-xl bg-cerulean px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-cerulean/20 transition-all hover:bg-cerulean-light disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none ${
+                    isLoading ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
                 >
                   {isLoading ? (
                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -190,6 +193,56 @@ export default function CheckFacts() {
             </div>
           </div>
         </div>
+
+        {/* Animated progress bar — shown during extracting and streaming */}
+        {(status === "extracting" || status === "streaming") && (
+          <div className="w-full bg-surface-2 rounded-full h-1.5 overflow-hidden my-4">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-navy to-teal"
+              initial={{ width: "3%" }}
+              animate={{
+                width:
+                  status === "extracting"
+                    ? "15%"
+                    : totalClaims > 0
+                    ? `${Math.max(15, Math.round((claims.length / totalClaims) * 100))}%`
+                    : "20%",
+              }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            />
+          </div>
+        )}
+
+        {/* Extracting state indicator — pulsing dot */}
+        {status === "extracting" && (
+          <motion.div
+            className="flex items-center gap-2 text-ink-muted text-sm my-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <motion.span
+              className="inline-block w-2 h-2 rounded-full bg-navy"
+              animate={{ scale: [1, 1.5, 1], opacity: [1, 0.4, 1] }}
+              transition={{ duration: 0.9, repeat: Infinity }}
+            />
+            Identifying claims...
+          </motion.div>
+        )}
+
+        {/* Streaming state indicator — claim count badge */}
+        {status === "streaming" && totalClaims > 0 && (
+          <motion.p
+            className="text-sm text-ink-muted my-1"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            Verifying claim{" "}
+            <span className="font-semibold text-navy">{claims.length}</span>
+            {" "}of{" "}
+            <span className="font-semibold text-navy">{totalClaims}</span>
+            ...
+          </motion.p>
+        )}
 
         {/* Extracting phase — waiting for LLM to parse claims */}
         {status === "extracting" && (
@@ -259,24 +312,32 @@ export default function CheckFacts() {
         )}
 
         {/* Error state */}
-        {status === "error" && (
-          <div className="mt-8 rounded-xl border border-terracotta-border bg-terracotta-wash p-5 animate-slide-up">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-terracotta" />
-              <div>
-                <h3 className="text-sm font-semibold text-terracotta">Something went wrong</h3>
-                <p className="mt-1 text-sm text-ink-muted">{error}</p>
-                <button
-                  onClick={handleSubmit}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-terracotta border border-terracotta-border transition-colors hover:bg-terracotta-wash"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Try again
-                </button>
+        <AnimatePresence>
+          {status === "error" && error && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-8 rounded-xl border border-terracotta-border bg-terracotta-wash p-5"
+            >
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-terracotta" />
+                <div>
+                  <h3 className="text-sm font-semibold text-terracotta">Something went wrong</h3>
+                  <p className="mt-1 text-sm text-ink-muted">{error}</p>
+                  <button
+                    onClick={handleSubmit}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-terracotta border border-terracotta-border transition-colors hover:bg-terracotta-wash"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Try again
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Final results */}
         {status === "success" && claims.length > 0 && (
