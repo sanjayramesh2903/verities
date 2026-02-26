@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
+import { AnimatePresence, motion } from "framer-motion";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // Eagerly loaded
@@ -18,18 +19,33 @@ const SharedReport = lazy(() => import("./pages/SharedReport"));
 
 function PageLoader() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ivory">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-cerulean border-t-transparent" />
+    <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-navy border-t-transparent" />
     </div>
   );
 }
 
-export default function App() {
+const pageVariants = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  exit:    { opacity: 0, y: -8 },
+};
+
+const pageTransition = { duration: 0.22, ease: "easeOut" };
+
+function AnimatedRoutes() {
+  const location = useLocation();
   return (
-    <ErrorBoundary>
-      <Toaster richColors position="top-right" />
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={pageTransition}
+      >
+        <Routes location={location}>
           <Route path="/" element={<Landing />} />
           <Route path="/check" element={<CheckFacts />} />
           <Route path="/review" element={<ReviewDocument />} />
@@ -40,6 +56,17 @@ export default function App() {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/report/:shareToken" element={<SharedReport />} />
         </Routes>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <Toaster richColors position="top-right" />
+      <Suspense fallback={<PageLoader />}>
+        <AnimatedRoutes />
       </Suspense>
     </ErrorBoundary>
   );

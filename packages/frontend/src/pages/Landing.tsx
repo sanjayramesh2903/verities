@@ -1,15 +1,10 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Search, BookOpen, Sparkles, Shield, Clock, FileText, TrendingUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, CheckCircle2, Search, BookOpen, Sparkles, Clock, FileText, TrendingUp } from "lucide-react";
+import { motion, useInView } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import { getHistory, getUsage, type CheckSummary, type UsageData } from "../lib/api";
 import Navbar from "../components/Navbar";
-
-const stats = [
-  { value: "100%", label: "Claims checked" },
-  { value: "MLA · APA · Chicago", label: "Citation formats" },
-  { value: "Real-time", label: "Verification" },
-];
 
 const steps = [
   {
@@ -74,7 +69,7 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
     : null;
 
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen bg-white">
       <Navbar />
       <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
 
@@ -92,28 +87,28 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
             to="/check"
             className="scholarly-card p-6 flex items-start gap-4 hover:shadow-md transition-shadow group animate-rise"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cerulean-wash">
-              <Search className="h-5 w-5 text-cerulean" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy/8">
+              <Search className="h-5 w-5 text-navy" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-ink group-hover:text-cerulean transition-colors">Check Facts</h2>
+              <h2 className="text-sm font-semibold text-ink group-hover:text-navy transition-colors">Check Facts</h2>
               <p className="mt-0.5 text-xs text-ink-muted">Verify claims in an essay or article with source citations</p>
             </div>
-            <ArrowRight className="ml-auto h-4 w-4 text-ink-ghost group-hover:text-cerulean transition-colors self-center" />
+            <ArrowRight className="ml-auto h-4 w-4 text-ink-faint group-hover:text-navy transition-colors self-center" />
           </Link>
 
           <Link
             to="/review"
             className="scholarly-card p-6 flex items-start gap-4 hover:shadow-md transition-shadow group animate-rise delay-75"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-parchment">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-2">
               <FileText className="h-5 w-5 text-ink-muted" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-ink group-hover:text-cerulean transition-colors">Review Document</h2>
+              <h2 className="text-sm font-semibold text-ink group-hover:text-navy transition-colors">Review Document</h2>
               <p className="mt-0.5 text-xs text-ink-muted">Scan an entire document for high-risk factual claims</p>
             </div>
-            <ArrowRight className="ml-auto h-4 w-4 text-ink-ghost group-hover:text-cerulean transition-colors self-center" />
+            <ArrowRight className="ml-auto h-4 w-4 text-ink-faint group-hover:text-navy transition-colors self-center" />
           </Link>
         </div>
 
@@ -125,7 +120,7 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
                 <Clock className="h-4 w-4 text-ink-muted" />
                 <h2 className="text-sm font-semibold text-ink">Recent Checks</h2>
               </div>
-              <Link to="/history" className="text-xs text-cerulean hover:underline">View all</Link>
+              <Link to="/history" className="text-xs text-navy hover:underline">View all</Link>
             </div>
 
             {recentChecks.length === 0 ? (
@@ -142,15 +137,15 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
                   >
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0 ${
                       check.type === "analyze"
-                        ? "bg-cerulean-wash text-cerulean"
-                        : "bg-parchment text-ink-muted"
+                        ? "bg-navy/8 text-navy"
+                        : "bg-surface-2 text-ink-muted"
                     }`}>
                       {check.type === "analyze" ? "Fact" : "Review"}
                     </span>
-                    <span className="flex-1 text-xs text-ink truncate group-hover:text-cerulean transition-colors">
+                    <span className="flex-1 text-xs text-ink truncate group-hover:text-navy transition-colors">
                       {check.inputSnippet}
                     </span>
-                    <span className="text-[10px] text-ink-ghost shrink-0">{formatDate(check.createdAt)}</span>
+                    <span className="text-[10px] text-ink-faint shrink-0">{formatDate(check.createdAt)}</span>
                   </Link>
                 ))}
               </div>
@@ -171,7 +166,7 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                     usage.planTier === "pro"
                       ? "bg-navy text-white"
-                      : "bg-parchment text-ink-muted"
+                      : "bg-surface-2 text-ink-muted"
                   }`}>
                     {usage.planTier === "pro" ? "Pro" : "Free"}
                   </span>
@@ -185,9 +180,9 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
                       {usage.checksUsed}/{usage.checksLimit}
                     </span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-parchment overflow-hidden">
+                  <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-cerulean transition-all"
+                      className="h-full rounded-full bg-navy transition-all"
                       style={{ width: `${Math.min(100, (usage.checksUsed / usage.checksLimit) * 100)}%` }}
                     />
                   </div>
@@ -202,9 +197,9 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
                         {usage.reviewsUsed}/{usage.reviewsLimit}
                       </span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-parchment overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-cerulean transition-all"
+                        className="h-full rounded-full bg-teal transition-all"
                         style={{ width: `${Math.min(100, (usage.reviewsUsed / usage.reviewsLimit) * 100)}%` }}
                       />
                     </div>
@@ -214,7 +209,7 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
                 {usage.planTier === "free" && checksRemaining === 0 && (
                   <Link
                     to="/pricing"
-                    className="block w-full text-center rounded-lg bg-navy px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-navy-light"
+                    className="btn-gold block w-full text-center text-xs py-2 px-3 rounded-lg"
                   >
                     Upgrade to Pro
                   </Link>
@@ -222,7 +217,7 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
                 {usage.planTier === "free" && checksRemaining !== null && checksRemaining > 0 && (
                   <Link
                     to="/pricing"
-                    className="block text-center text-xs text-cerulean hover:underline"
+                    className="block text-center text-xs text-navy hover:underline"
                   >
                     See Pro plans →
                   </Link>
@@ -238,6 +233,10 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
 
 export default function Landing() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const featuresRef = useRef<HTMLDivElement>(null);
+  const featuresInView = useInView(featuresRef, { once: true, margin: "-80px" });
 
   if (user) {
     return <LoggedInDashboard user={user} />;
@@ -248,102 +247,58 @@ export default function Landing() {
       <Navbar />
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-white">
-        {/* Subtle dot grid */}
-        <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none" />
-
-        {/* Bottom fade */}
-        <div
-          className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, transparent, white)" }}
+      <section className="hero-gradient text-white py-28 px-6 text-center relative overflow-hidden min-h-[520px] flex flex-col items-center justify-center">
+        {/* Background orbs */}
+        <motion.div
+          className="absolute top-1/3 left-1/4 w-80 h-80 rounded-full bg-teal/10 blur-3xl pointer-events-none"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-gold/10 blur-3xl pointer-events-none"
+          animate={{ scale: [1.1, 1, 1.1], opacity: [0.2, 0.4, 0.2] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
 
-        <div className="relative mx-auto max-w-4xl px-4 pt-24 pb-20 text-center sm:px-6">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-navy/10 bg-navy-wash px-4 py-1.5 mb-8">
-            <Shield className="h-3.5 w-3.5 text-navy" />
-            <span className="text-xs font-semibold text-navy tracking-wide uppercase">AI-Powered Fact Checking</span>
-          </div>
+        <motion.h1
+          className="text-5xl md:text-6xl font-bold mb-5 relative z-10 leading-tight"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: "easeOut" }}
+        >
+          Verify Claims Instantly.<br />
+          <span className="text-gold">Write Smarter.</span>
+        </motion.h1>
 
-          {/* Heading */}
-          <h1
-            className="font-display font-bold leading-tight text-navy animate-rise"
-            style={{ fontSize: "clamp(2.5rem, 6vw, 4rem)" }}
-          >
-            Verify Claims Instantly.
-            <br />
-            Write Smarter.{" "}
-            <em
-              style={{
-                fontStyle: "italic",
-                fontWeight: 300,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              With AI.
-            </em>
-          </h1>
+        <motion.p
+          className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto relative z-10"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.45 }}
+        >
+          AI fact-checking with real sources, citation generation, and evidence-backed rewrites — in seconds.
+        </motion.p>
 
-          {/* Sub-heading */}
-          <p
-            className="mt-7 mx-auto max-w-lg text-[1.05rem] leading-relaxed text-ink-muted animate-rise"
-            style={{ animationDelay: "80ms" }}
+        <motion.div
+          className="flex flex-wrap gap-4 justify-center relative z-10"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28, duration: 0.4 }}
+        >
+          <button onClick={() => navigate("/check")} className="btn-gold text-base px-8 py-3 text-lg">
+            Get Started Free
+          </button>
+          <button
+            onClick={() => navigate("/review")}
+            className="border-2 border-white text-white font-semibold px-8 py-3 rounded-lg hover:bg-white hover:text-navy transition-colors duration-150 text-lg cursor-pointer"
           >
-            Verities checks factual claims as you write,
-            {" "}suggests reliable sources,
-            <br className="hidden sm:block" />
-            and inserts properly formatted citations
-            {" "}— all without leaving your document.
-          </p>
-
-          {/* CTAs */}
-          <div
-            className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center animate-rise"
-            style={{ animationDelay: "160ms" }}
-          >
-            <Link
-              to="/check"
-              className="inline-flex items-center gap-2 rounded-2xl bg-navy px-8 py-3.5 text-[0.95rem] font-semibold text-white shadow-lg transition-all hover:bg-navy-light hover:shadow-xl hover:-translate-y-0.5"
-            >
-              Get Started
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              to="/review"
-              className="inline-flex items-center gap-2 rounded-2xl border border-vellum bg-white px-8 py-3.5 text-[0.95rem] font-semibold text-ink transition-all hover:border-stone hover:shadow-md hover:-translate-y-0.5"
-            >
-              Review a Document
-            </Link>
-          </div>
-
-          {/* Disclaimer */}
-          <p
-            className="mt-6 text-[0.8rem] italic text-ink-muted animate-fade-in"
-            style={{ animationDelay: "240ms" }}
-          >
-            Backed by verifiable sources — no hallucinated citations.
-          </p>
-
-          {/* Stats row */}
-          <div
-            className="mt-12 flex flex-wrap justify-center gap-4 animate-fade-in"
-            style={{ animationDelay: "320ms" }}
-          >
-            {stats.map((s) => (
-              <div
-                key={s.label}
-                className="rounded-2xl border border-vellum bg-white/80 px-5 py-3 text-center shadow-sm"
-              >
-                <div className="text-base font-bold text-navy">{s.value}</div>
-                <div className="text-xs text-ink-faint mt-0.5">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+            Review a Document
+          </button>
+        </motion.div>
       </section>
 
       {/* ── How it works ─────────────────────────────────────────── */}
-      <section className="border-t border-vellum bg-parchment/40">
+      <section className="border-t border-border bg-surface">
         <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
           <p className="text-center text-xs font-bold uppercase tracking-widest text-ink-faint mb-3">
             How it works
@@ -354,17 +309,20 @@ export default function Landing() {
 
           <div className="mt-12 grid gap-8 sm:grid-cols-3 relative">
             {/* Connector line (desktop only) */}
-            <div className="absolute top-6 left-[20%] right-[20%] h-px bg-vellum hidden sm:block" />
+            <div className="absolute top-6 left-[20%] right-[20%] h-px bg-border hidden sm:block" />
 
             {steps.map((step, i) => {
               const Icon = step.icon;
               return (
-                <div
+                <motion.div
                   key={step.n}
-                  className="text-center animate-slide-up"
-                  style={{ animationDelay: `${i * 100}ms` }}
+                  className="text-center"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1, duration: 0.4, ease: "easeOut" }}
                 >
-                  <div className="relative mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full border-2 border-vellum bg-white shadow-sm z-10">
+                  <div className="relative mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full border-2 border-border bg-white shadow-sm z-10">
                     <Icon className="h-5 w-5 text-navy" />
                   </div>
                   <div className="text-xs font-bold uppercase tracking-widest text-ink-faint mb-1">
@@ -372,7 +330,7 @@ export default function Landing() {
                   </div>
                   <h3 className="text-base font-semibold text-ink">{step.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-ink-muted">{step.description}</p>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -380,7 +338,7 @@ export default function Landing() {
       </section>
 
       {/* ── Features ─────────────────────────────────────────────── */}
-      <section className="border-t border-vellum">
+      <section className="border-t border-border" ref={featuresRef}>
         <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
           <p className="text-center text-xs font-bold uppercase tracking-widest text-ink-faint mb-3">
             What you get
@@ -392,19 +350,22 @@ export default function Landing() {
             {features.map((feature, i) => {
               const Icon = feature.icon;
               return (
-                <div
+                <motion.div
                   key={feature.title}
-                  className="scholarly-card p-6 flex gap-4 animate-slide-up"
-                  style={{ animationDelay: `${i * 70}ms` }}
+                  className="scholarly-card p-6 flex gap-4"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1, duration: 0.4, ease: "easeOut" }}
                 >
-                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-wash">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy/8">
                     <Icon className="h-5 w-5 text-navy" />
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-navy">{feature.title}</h3>
                     <p className="mt-1 text-sm leading-relaxed text-ink-muted">{feature.description}</p>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -412,7 +373,7 @@ export default function Landing() {
       </section>
 
       {/* ── CTA Band ─────────────────────────────────────────────── */}
-      <section className="border-t border-vellum bg-navy">
+      <section className="border-t border-border bg-navy">
         <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 text-center">
           <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">
             Start writing with confidence
@@ -420,18 +381,18 @@ export default function Landing() {
           <p className="mt-3 text-white/60 text-sm leading-relaxed">
             Free to use. No account required to check your first claims.
           </p>
-          <Link
-            to="/check"
-            className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-white px-8 py-3.5 text-sm font-semibold text-navy shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5"
+          <button
+            onClick={() => navigate("/check")}
+            className="mt-8 btn-gold inline-flex items-center gap-2 rounded-2xl px-8 py-3.5 text-sm"
           >
             Check Facts Now
             <ArrowRight className="h-4 w-4" />
-          </Link>
+          </button>
         </div>
       </section>
 
       {/* ── Footer ───────────────────────────────────────────────── */}
-      <footer className="border-t border-navy-mid bg-navy">
+      <footer className="border-t border-navy-dark bg-navy">
         <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
             <div className="flex items-center gap-2">

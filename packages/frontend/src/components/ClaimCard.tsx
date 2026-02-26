@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp, Quote } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import type { Claim } from "@verities/shared";
 import VerdictBadge from "./VerdictBadge";
 import SourceItem from "./SourceItem";
@@ -15,10 +16,12 @@ export default function ClaimCard({ claim, index, onUseRewrite }: ClaimCardProps
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div
-      className="annotation-card animate-slide-up p-5"
+    <motion.div
+      className="annotation-card p-5"
       data-verdict={claim.verdict}
-      style={{ animationDelay: `${index * 80}ms` }}
+      initial={{ opacity: 0, y: 20, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ delay: (index ?? 0) * 0.06, duration: 0.3, ease: "easeOut" }}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
@@ -40,7 +43,7 @@ export default function ClaimCard({ claim, index, onUseRewrite }: ClaimCardProps
 
         <button
           onClick={() => setExpanded(!expanded)}
-          className="shrink-0 rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-parchment hover:text-ink"
+          className="shrink-0 rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-surface hover:text-ink"
           aria-label={expanded ? "Collapse" : "Expand"}
         >
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -93,12 +96,12 @@ export default function ClaimCard({ claim, index, onUseRewrite }: ClaimCardProps
       {!expanded && (claim.sources.length > 0 || claim.rewrites.length > 0) && (
         <button
           onClick={() => setExpanded(true)}
-          className="mt-2 text-xs font-medium text-cerulean hover:underline underline-offset-2"
+          className="mt-2 text-xs font-medium text-navy hover:underline underline-offset-2"
         >
           Show {claim.sources.length} source{claim.sources.length !== 1 ? "s" : ""}
           {claim.rewrites.length > 0 && ` & ${claim.rewrites.length} rewrite${claim.rewrites.length !== 1 ? "s" : ""}`}
         </button>
       )}
-    </div>
+    </motion.div>
   );
 }

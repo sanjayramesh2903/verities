@@ -101,7 +101,7 @@ export default function Navbar() {
           ) : (
             <button
               onClick={login}
-              className="flex items-center gap-1.5 rounded-full bg-white/15 border border-white/20 px-4 py-1.5 text-sm font-semibold text-white transition-all hover:bg-white/25 hover:border-white/30"
+              className="btn-gold text-sm py-1.5 px-4 rounded-full"
             >
               Sign In
             </button>
