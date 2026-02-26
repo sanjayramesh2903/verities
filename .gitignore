@@ -6,3 +6,6 @@ dist/
 *.db-journal
 *.tsbuildinfo
 .claude/
+.env.supabase
+supabase/.env
+packages/frontend/.env.local
