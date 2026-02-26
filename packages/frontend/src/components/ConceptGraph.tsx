@@ -15,6 +15,8 @@ interface GraphEdge {
   source: string;
   target: string;
   weight: number;
+  relationship_type?: string;
+  relationship_label?: string;
 }
 
 interface Props {
@@ -22,23 +24,30 @@ interface Props {
 }
 
 const VERDICT_COLORS: Record<string, string> = {
-  broadly_supported: "#4ade80",
-  overstated: "#f87171",
-  disputed: "#fb923c",
-  unclear: "#9ca3af",
+  broadly_supported: "#10B981",
+  contested: "#F59E0B",
+  refuted: "#F43F5E",
+  unclear: "#94A3B8",
 };
 
 const VERDICT_LABELS: Record<string, string> = {
   broadly_supported: "Broadly Supported",
-  overstated: "Overstated",
-  disputed: "Disputed",
+  contested: "Contested",
+  refuted: "Refuted",
   unclear: "Unclear",
 };
 
-const CONCEPT_COLOR = "#60a5fa";
+const CONCEPT_COLOR = "#0D9488";
 const BG_COLOR = "#0f172a";
 const EDGE_COLOR = "rgba(148,163,184,0.3)";
 const EDGE_HOVER_COLOR = "rgba(148,163,184,0.7)";
+
+function getRelationshipColor(type?: string): string {
+  if (type === "contradicts") return "#F43F5E";
+  if (type === "supports") return "#10B981";
+  if (type === "elaborates") return "#0D9488";
+  return "#94a3b8";
+}
 
 function buildGraph(claims: Claim[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodes: GraphNode[] = [];
@@ -89,6 +98,8 @@ export default function ConceptGraph({ claims }: Props) {
   const { nodes, edges } = useMemo(() => buildGraph(claims), [claims]);
 
   const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
+  const [layoutMode, setLayoutMode] = useState<"force" | "radial">("force");
+
   const selectedIdRef = useRef<string | null>(null);
   const setSelectedRef = useRef(setSelectedClaim);
   setSelectedRef.current = setSelectedClaim;
@@ -101,8 +112,8 @@ export default function ConceptGraph({ claims }: Props) {
     if (!svgRef.current || !containerRef.current || nodes.length === 0) return;
 
     const container = containerRef.current;
-    const width = container.clientWidth;
-    const height = 420;
+    const width = container.clientWidth ?? 800;
+    const height = Math.min(Math.max(width * 0.6, 400), 600);
 
     const svg = d3.select(svgRef.current)
       .attr("width", width)
@@ -132,7 +143,13 @@ export default function ConceptGraph({ claims }: Props) {
     feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
     type SimNode = GraphNode & d3.SimulationNodeDatum;
-    type SimLink = { source: SimNode; target: SimNode; weight: number };
+    type SimLink = {
+      source: SimNode;
+      target: SimNode;
+      weight: number;
+      relationship_type?: string;
+      relationship_label?: string;
+    };
 
     const simNodes: SimNode[] = nodes.map((n) => ({ ...n }));
     const nodeById = new Map(simNodes.map((n) => [n.id, n]));
@@ -142,7 +159,13 @@ export default function ConceptGraph({ claims }: Props) {
         const s = nodeById.get(e.source);
         const t = nodeById.get(e.target);
         if (!s || !t) return null;
-        return { source: s, target: t, weight: e.weight };
+        return {
+          source: s,
+          target: t,
+          weight: e.weight,
+          relationship_type: e.relationship_type,
+          relationship_label: e.relationship_label,
+        };
       })
       .filter(Boolean) as SimLink[];
 
@@ -154,6 +177,17 @@ export default function ConceptGraph({ claims }: Props) {
       .force("charge", d3.forceManyBody().strength(-200))
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collide", d3.forceCollide<SimNode>().radius((d) => d.type === "claim" ? 36 : 28));
+
+    if (layoutMode === "radial") {
+      simulation.force(
+        "radial",
+        d3.forceRadial(
+          (d: SimNode) => (d.type === "claim" ? 80 : 180),
+          width / 2,
+          height / 2
+        ).strength(0.4)
+      );
+    }
 
     const g = svg.append("g");
     svg.call(
@@ -173,8 +207,29 @@ export default function ConceptGraph({ claims }: Props) {
 
     const link = g.append("g").selectAll<SVGLineElement, SimLink>("line")
       .data(simLinks).join("line")
-      .attr("stroke", EDGE_COLOR)
+      .attr("stroke", (d) => {
+        const rel = d.relationship_type;
+        if (rel === "contradicts") return "#F43F5E";
+        if (rel === "supports") return "#10B981";
+        if (rel === "elaborates") return "#0D9488";
+        return EDGE_COLOR;
+      })
+      .attr("stroke-opacity", 0.6)
       .attr("stroke-width", (d) => Math.min(d.weight * 1.2, 4));
+
+    // Edge labels (relationship descriptions)
+    const linkLabelG = g.append("g").attr("class", "link-labels");
+
+    const linkLabel = linkLabelG
+      .selectAll<SVGTextElement, SimLink>("text")
+      .data(simLinks.filter((d) => !!d.relationship_label))
+      .join("text")
+      .attr("font-size", 9)
+      .attr("fill", "#94a3b8")
+      .attr("text-anchor", "middle")
+      .attr("pointer-events", "none")
+      .attr("dy", -4)
+      .text((d) => d.relationship_label ?? "");
 
     const nodeGroup = g.append("g").selectAll<SVGGElement, SimNode>("g")
       .data(simNodes).join("g")
@@ -196,7 +251,7 @@ export default function ConceptGraph({ claims }: Props) {
       .attr("r", (d) => d.type === "claim" ? 14 : 9)
       .attr("fill", (d) =>
         d.type === "claim"
-          ? (VERDICT_COLORS[d.verdict ?? "unclear"] ?? "#9ca3af")
+          ? (VERDICT_COLORS[d.verdict ?? "unclear"] ?? "#94A3B8")
           : CONCEPT_COLOR
       )
       .attr("filter", "url(#glow)")
@@ -206,13 +261,14 @@ export default function ConceptGraph({ claims }: Props) {
         d3.select(this).transition().duration(150).attr("r", d.type === "claim" ? 18 : 12);
         link.attr("stroke", (l) =>
           (l.source as SimNode).id === d.id || (l.target as SimNode).id === d.id
-            ? EDGE_HOVER_COLOR : EDGE_COLOR
+            ? EDGE_HOVER_COLOR
+            : getRelationshipColor(l.relationship_type)
         );
       })
       .on("mouseout", function (_, d) {
         if (selectedIdRef.current === d.id) return;
         d3.select(this).transition().duration(150).attr("r", d.type === "claim" ? 14 : 9);
-        link.attr("stroke", EDGE_COLOR);
+        link.attr("stroke", (l) => getRelationshipColor(l.relationship_type));
       })
       .on("click", (event, d) => {
         event.stopPropagation();
@@ -229,7 +285,7 @@ export default function ConceptGraph({ claims }: Props) {
           .attr("stroke", (n) => selectedIdRef.current === n.id ? "white" : "none")
           .attr("stroke-width", 2);
 
-        link.attr("stroke", EDGE_COLOR);
+        link.attr("stroke", (l) => getRelationshipColor(l.relationship_type));
         setSelectedRef.current(isSame ? null : (claimMapRef.current.get(d.id) ?? null));
       });
 
@@ -257,21 +313,37 @@ export default function ConceptGraph({ claims }: Props) {
         .attr("y1", (d) => (d.source as SimNode).y ?? 0)
         .attr("x2", (d) => (d.target as SimNode).x ?? 0)
         .attr("y2", (d) => (d.target as SimNode).y ?? 0);
+      linkLabel
+        .attr("x", (d) => ((d.source as SimNode).x! + (d.target as SimNode).x!) / 2)
+        .attr("y", (d) => ((d.source as SimNode).y! + (d.target as SimNode).y!) / 2);
       nodeGroup.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
     });
 
+    // Re-heat simulation on layout mode change
+    simulation.alpha(0.5).restart();
+
     return () => { simulation.stop(); };
-  }, [nodes, edges]);
+  }, [nodes, edges, layoutMode]);
 
   if (claims.length === 0) return null;
 
   const verdictColor = selectedClaim
-    ? VERDICT_COLORS[selectedClaim.verdict] ?? "#9ca3af"
-    : "#9ca3af";
+    ? VERDICT_COLORS[selectedClaim.verdict] ?? "#94A3B8"
+    : "#94A3B8";
 
   return (
     <div className="rounded-xl overflow-hidden border border-vellum" ref={containerRef}>
-      <svg ref={svgRef} className="w-full block" style={{ minHeight: 420 }} />
+      {/* Layout toggle */}
+      <div className="flex justify-end px-3 pt-2">
+        <button
+          onClick={() => setLayoutMode(m => m === "force" ? "radial" : "force")}
+          className="text-xs text-ink-faint hover:text-navy border border-border rounded px-2 py-1 transition-colors"
+        >
+          {layoutMode === "force" ? "Radial layout" : "Force layout"}
+        </button>
+      </div>
+
+      <svg ref={svgRef} className="w-full block" style={{ minHeight: 400 }} />
 
       {/* Selected claim detail panel */}
       {selectedClaim && (
@@ -317,20 +389,32 @@ export default function ConceptGraph({ claims }: Props) {
       )}
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 bg-slate-950 px-5 py-3 border-t border-white/5">
+      <div className="flex flex-wrap items-center gap-3 bg-slate-950 px-5 py-3 border-t border-white/5 text-xs text-slate-400">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Legend</span>
-        {Object.entries(VERDICT_COLORS).map(([verdict, color]) => (
-          <div key={verdict} className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-[10px] text-slate-400 capitalize">
-              {verdict.replace(/_/g, " ")}
-            </span>
-          </div>
-        ))}
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CONCEPT_COLOR }} />
-          <span className="text-[10px] text-slate-400">Concept</span>
-        </div>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: "#10B981" }} />
+          <span>Supported</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: "#F59E0B" }} />
+          <span>Contested</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: "#F43F5E" }} />
+          <span>Refuted</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: "#0D9488" }} />
+          <span>Concept</span>
+        </span>
+        <span className="flex items-center gap-1 ml-2 border-l border-white/10 pl-2">
+          <span className="w-4 inline-block border-t-2" style={{ borderColor: "#10B981" }} />
+          <span>supports</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-4 inline-block border-t-2" style={{ borderColor: "#F43F5E" }} />
+          <span>contradicts</span>
+        </span>
         <span className="ml-auto text-[10px] text-slate-600">Click claim · Drag · Scroll to zoom</span>
       </div>
     </div>

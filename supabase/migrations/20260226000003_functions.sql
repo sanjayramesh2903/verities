@@ -27,3 +27,13 @@ BEGIN
     AND target_id = p_target_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.increment_topic_count(p_topic_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE public.topics
+  SET claim_count = claim_count + 1,
+      updated_at = NOW()
+  WHERE id = p_topic_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
