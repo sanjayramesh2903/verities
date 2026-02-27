@@ -2,8 +2,18 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowRight, BookOpen, FileText, Calendar } from "lucide-react";
 import type { Claim } from "@verities/shared";
-import { getPublicReport, type SharedReportData } from "../lib/api";
+import { getPublicReport } from "../lib/api";
+
 import ClaimCard from "../components/ClaimCard";
+
+interface SharedReportData {
+  type: string;
+  result_json: { claims: Claim[] };
+  claim_count: number;
+  created_at: string;
+  expires_at: string;
+  input_snippet?: string;
+}
 
 export default function SharedReport() {
   const { shareToken } = useParams<{ shareToken: string }>();
@@ -21,7 +31,7 @@ export default function SharedReport() {
 
     getPublicReport(shareToken)
       .then((report) => {
-        setData(report);
+        setData(report as SharedReportData);
       })
       .catch((err: Error) => {
         if (err.message.includes("410") || err.message.toLowerCase().includes("expired")) {
@@ -36,13 +46,13 @@ export default function SharedReport() {
   }, [shareToken]);
 
   const claims: Claim[] =
-    data?.result?.claims ?? [];
+    data?.result_json?.claims ?? [];
 
   const typeLabel =
     data?.type === "review" ? "Document Review" : "Fact Check";
 
-  const formattedDate = data?.createdAt
-    ? new Date(data.createdAt).toLocaleDateString("en-US", {
+  const formattedDate = data?.created_at
+    ? new Date(data.created_at).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -107,10 +117,10 @@ export default function SharedReport() {
             </div>
 
             {/* Input snippet */}
-            {data.inputSnippet && (
+            {data.input_snippet && (
               <blockquote className="rounded-xl border-l-4 border-cerulean bg-cerulean/5 px-5 py-4">
                 <p className="text-sm leading-relaxed text-ink-muted italic">
-                  "{data.inputSnippet}"
+                  "{data.input_snippet}"
                 </p>
               </blockquote>
             )}

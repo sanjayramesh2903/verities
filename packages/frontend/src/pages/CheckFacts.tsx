@@ -4,7 +4,13 @@ import { Search, AlertCircle, RefreshCw, Info, GitFork, TrendingUp } from "lucid
 import { motion, AnimatePresence } from "framer-motion";
 import { LIMITS } from "@verities/shared";
 import type { Claim, CitationStyle } from "@verities/shared";
-import { analyzeClaimsStream, getUsage, type UsageData } from "../lib/api";
+import { analyzeClaimsStream, getUsage } from "../lib/api";
+
+interface UsageData {
+  plan_tier: "free" | "pro";
+  checks_used: number;
+  checks_limit: number;
+}
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
 import ClaimCard from "../components/ClaimCard";
@@ -31,7 +37,7 @@ export default function CheckFacts() {
   // Fetch usage quota when user is logged in
   useEffect(() => {
     if (user) {
-      getUsage().then(setUsage).catch(() => {});
+      getUsage().then((data) => setUsage(data as UsageData)).catch(() => {});
     }
   }, [user]);
 
@@ -52,38 +58,37 @@ export default function CheckFacts() {
     setTotalClaims(0);
 
     try {
-      await analyzeClaimsStream(
-        { text, citation_style: citationStyle, options: { max_claims: 10 } },
-        {
-          onExtraction(total) {
-            setTotalClaims(total);
-            setStatus("streaming");
-          },
-          onClaim(_index, claim) {
-            setClaims((prev) => [...prev, claim]);
-          },
-          onDone(data) {
-            setProcessingTimeMs(data.metadata.processing_time_ms);
-            setStatus("success");
-            // Refresh usage after a successful check
-            if (user) getUsage().then(setUsage).catch(() => {});
-          },
-          onError(message) {
+      await analyzeClaimsStream({
+        text,
+        citationStyle,
+        onExtraction(total) {
+          setTotalClaims(total);
+          setStatus("streaming");
+        },
+        onClaim(_index, claim) {
+          setClaims((prev) => [...prev, claim as Claim]);
+        },
+        onDone(metadata) {
+          const meta = metadata as { processing_time_ms: number };
+          setProcessingTimeMs(meta.processing_time_ms);
+          setStatus("success");
+          // Refresh usage after a successful check
+          if (user) getUsage().then((data) => setUsage(data as UsageData)).catch(() => {});
+        },
+        onError(message) {
+          if (message === "free_tier_limit") {
+            setShowUpgrade(true);
+            setStatus("idle");
+          } else {
             setError(message);
             setStatus("error");
-          },
-        }
-      );
+          }
+        },
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
-      // 402 = quota exceeded — open upgrade modal
-      if (msg.toLowerCase().includes("free tier") || msg.includes("402")) {
-        setShowUpgrade(true);
-        setStatus("idle");
-      } else {
-        setError(msg);
-        setStatus("error");
-      }
+      setError(msg);
+      setStatus("error");
     }
   }, [text, citationStyle, user]);
 
@@ -94,9 +99,9 @@ export default function CheckFacts() {
   const isLoading = status === "extracting" || status === "streaming";
 
   const checksRemaining = usage
-    ? Math.max(0, usage.checksLimit - usage.checksUsed)
+    ? Math.max(0, usage.checks_limit - usage.checks_used)
     : null;
-  const quotaExhausted = usage?.planTier === "free" && checksRemaining === 0;
+  const quotaExhausted = usage?.plan_tier === "free" && checksRemaining === 0;
 
   return (
     <div className="min-h-screen bg-ivory">
@@ -115,7 +120,7 @@ export default function CheckFacts() {
         </div>
 
         {/* Usage indicator — only for logged-in free tier users */}
-        {usage && usage.planTier === "free" && (
+        {usage && usage.plan_tier === "free" && (
           <div className={`mb-5 flex items-center justify-between rounded-lg px-4 py-2.5 animate-rise ${
             quotaExhausted
               ? "bg-terracotta-wash border border-terracotta-border"
@@ -126,7 +131,7 @@ export default function CheckFacts() {
               <span className={`text-xs font-medium ${quotaExhausted ? "text-terracotta" : "text-ink-muted"}`}>
                 {quotaExhausted
                   ? "You've used all free fact-checks this month"
-                  : `${checksRemaining} of ${usage.checksLimit} fact-checks remaining this month`}
+                  : `${checksRemaining} of ${usage.checks_limit} fact-checks remaining this month`}
               </span>
             </div>
             <Link

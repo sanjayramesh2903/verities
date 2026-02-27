@@ -3,7 +3,22 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, CheckCircle2, Search, BookOpen, Sparkles, Clock, FileText, TrendingUp } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
-import { getHistory, getUsage, type CheckSummary, type UsageData } from "../lib/api";
+import { getHistory, getUsage } from "../lib/api";
+
+interface CheckSummary {
+  id: string;
+  type: "analyze" | "review";
+  input_snippet: string;
+  created_at: string;
+}
+
+interface UsageData {
+  plan_tier: "free" | "pro";
+  checks_used: number;
+  checks_limit: number;
+  reviews_used: number;
+  reviews_limit: number | null;
+}
 import Navbar from "../components/Navbar";
 
 const steps = [
@@ -59,13 +74,13 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
   const [usage, setUsage] = useState<UsageData | null>(null);
 
   useEffect(() => {
-    getHistory(3, 0).then((res) => setRecentChecks(res.checks)).catch(() => {});
-    getUsage().then(setUsage).catch(() => {});
+    getHistory(3, 0).then((res) => setRecentChecks(res.checks as CheckSummary[])).catch(() => {});
+    getUsage().then((data) => setUsage(data as UsageData)).catch(() => {});
   }, []);
 
   const name = user.displayName ?? user.email.split("@")[0];
-  const checksRemaining = usage && usage.planTier === "free"
-    ? Math.max(0, usage.checksLimit - usage.checksUsed)
+  const checksRemaining = usage && usage.plan_tier === "free"
+    ? Math.max(0, usage.checks_limit - usage.checks_used)
     : null;
 
   return (
@@ -143,9 +158,9 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
                       {check.type === "analyze" ? "Fact" : "Review"}
                     </span>
                     <span className="flex-1 text-xs text-ink truncate group-hover:text-navy transition-colors">
-                      {check.inputSnippet}
+                      {check.input_snippet}
                     </span>
-                    <span className="text-[10px] text-ink-faint shrink-0">{formatDate(check.createdAt)}</span>
+                    <span className="text-[10px] text-ink-faint shrink-0">{formatDate(check.created_at)}</span>
                   </Link>
                 ))}
               </div>
@@ -164,11 +179,11 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-ink-muted">Plan</span>
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                    usage.planTier === "pro"
+                    usage.plan_tier === "pro"
                       ? "bg-navy text-white"
                       : "bg-surface-2 text-ink-muted"
                   }`}>
-                    {usage.planTier === "pro" ? "Pro" : "Free"}
+                    {usage.plan_tier === "pro" ? "Pro" : "Free"}
                   </span>
                 </div>
 
@@ -177,36 +192,36 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs text-ink-muted">Fact-checks</span>
                     <span className="text-xs font-medium text-ink">
-                      {usage.checksUsed}/{usage.checksLimit}
+                      {usage.checks_used}/{usage.checks_limit}
                     </span>
                   </div>
                   <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-navy transition-all"
-                      style={{ width: `${Math.min(100, (usage.checksUsed / usage.checksLimit) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (usage.checks_used / usage.checks_limit) * 100)}%` }}
                     />
                   </div>
                 </div>
 
                 {/* Reviews progress (free only) */}
-                {usage.reviewsLimit !== null && (
+                {usage.reviews_limit !== null && (
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs text-ink-muted">Reviews</span>
                       <span className="text-xs font-medium text-ink">
-                        {usage.reviewsUsed}/{usage.reviewsLimit}
+                        {usage.reviews_used}/{usage.reviews_limit}
                       </span>
                     </div>
                     <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
                       <div
                         className="h-full rounded-full bg-teal transition-all"
-                        style={{ width: `${Math.min(100, (usage.reviewsUsed / usage.reviewsLimit) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (usage.reviews_used / usage.reviews_limit) * 100)}%` }}
                       />
                     </div>
                   </div>
                 )}
 
-                {usage.planTier === "free" && checksRemaining === 0 && (
+                {usage.plan_tier === "free" && checksRemaining === 0 && (
                   <Link
                     to="/pricing"
                     className="btn-gold block w-full text-center text-xs py-2 px-3 rounded-lg"
@@ -214,7 +229,7 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
                     Upgrade to Pro
                   </Link>
                 )}
-                {usage.planTier === "free" && checksRemaining !== null && checksRemaining > 0 && (
+                {usage.plan_tier === "free" && checksRemaining !== null && checksRemaining > 0 && (
                   <Link
                     to="/pricing"
                     className="block text-center text-xs text-navy hover:underline"

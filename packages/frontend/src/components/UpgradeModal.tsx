@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, Check, Zap } from "lucide-react";
-import { createCheckoutSession } from "../lib/api";
+// Billing coming soon — createCheckoutSession not yet implemented
 
 interface UpgradeModalProps {
   open: boolean;
@@ -27,16 +27,9 @@ export default function UpgradeModal({ open, onClose }: UpgradeModalProps) {
 
   if (!open) return null;
 
-  async function handleUpgrade() {
-    setLoading(true);
+  function handleUpgrade() {
     setError(null);
-    try {
-      const { url } = await createCheckoutSession();
-      window.location.href = url;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-      setLoading(false);
-    }
+    window.alert("Billing coming soon. Contact hello@verities.app to upgrade.");
   }
 
   return (

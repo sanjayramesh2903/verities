@@ -6,7 +6,14 @@ import {
 } from "lucide-react";
 import { LIMITS } from "@verities/shared";
 import type { ReviewDocumentResponse } from "@verities/shared";
-import { reviewDocument, getUsage, type UsageData } from "../lib/api";
+import { reviewDocument, getUsage } from "../lib/api";
+
+interface UsageData {
+  plan_tier: "free" | "pro";
+  reviews_used: number;
+  reviews_limit: number | null;
+  reset_at: string;
+}
 import { useAuth } from "../contexts/AuthContext";
 import { extractTextFromFile, SUPPORTED_EXTENSIONS, DocumentParseError } from "../lib/parseDocument";
 import Navbar from "../components/Navbar";
@@ -58,7 +65,7 @@ export default function ReviewDocument() {
   // Fetch usage quota when user is logged in
   useEffect(() => {
     if (user) {
-      getUsage().then(setUsage).catch(() => {});
+      getUsage().then((data) => setUsage(data as UsageData)).catch(() => {});
     }
   }, [user]);
 
@@ -108,11 +115,11 @@ export default function ReviewDocument() {
     setResult(null);
 
     try {
-      const res = await reviewDocument({ text, options: { max_risk_claims: 20 } });
-      setResult(res);
+      const res = await reviewDocument(text);
+      setResult(res as ReviewDocumentResponse);
       setStatus("success");
       // Refresh usage after successful review
-      if (user) getUsage().then(setUsage).catch(() => {});
+      if (user) getUsage().then((data) => setUsage(data as UsageData)).catch(() => {});
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       // 402 = quota exceeded
@@ -133,9 +140,9 @@ export default function ReviewDocument() {
     result?.high_risk_claims.filter((c) => c.risk_score <= 0.4).length ?? 0;
 
   const reviewsRemaining = usage
-    ? usage.reviewsLimit === null ? null : Math.max(0, usage.reviewsLimit - usage.reviewsUsed)
+    ? usage.reviews_limit === null ? null : Math.max(0, usage.reviews_limit - usage.reviews_used)
     : null;
-  const quotaExhausted = usage?.planTier === "free" && reviewsRemaining === 0;
+  const quotaExhausted = usage?.plan_tier === "free" && reviewsRemaining === 0;
 
   return (
     <div className="min-h-screen bg-ivory">
@@ -158,7 +165,7 @@ export default function ReviewDocument() {
         </div>
 
         {/* Usage indicator — only for logged-in free tier users */}
-        {usage && usage.planTier === "free" && (
+        {usage && usage.plan_tier === "free" && (
           <div className={`mb-5 flex items-center justify-between rounded-lg px-4 py-2.5 animate-rise ${
             quotaExhausted
               ? "bg-terracotta-wash border border-terracotta-border"
@@ -169,7 +176,7 @@ export default function ReviewDocument() {
               <span className={`text-xs font-medium ${quotaExhausted ? "text-terracotta" : "text-ink-muted"}`}>
                 {quotaExhausted
                   ? "You've used all free document reviews this month"
-                  : `${reviewsRemaining} of ${usage.reviewsLimit} document reviews remaining this month`}
+                  : `${reviewsRemaining} of ${usage.reviews_limit} document reviews remaining this month`}
               </span>
             </div>
             <Link

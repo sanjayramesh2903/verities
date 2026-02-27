@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Check, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
-import { createCheckoutSession } from "../lib/api";
+// Billing coming soon — createCheckoutSession not yet implemented
 
 const FREE_FEATURES = [
   "5 fact-checks / month",
@@ -46,20 +46,13 @@ export default function Pricing() {
   const [upgradeError, setUpgradeError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = () => {
     if (!user) {
       setUpgradeError("Please sign in first to upgrade.");
       return;
     }
-    setUpgradeLoading(true);
     setUpgradeError("");
-    try {
-      const { url } = await createCheckoutSession();
-      window.location.href = url;
-    } catch (err) {
-      setUpgradeError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-      setUpgradeLoading(false);
-    }
+    window.alert("Billing coming soon. Contact hello@verities.app to upgrade.");
   };
 
   return (

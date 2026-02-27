@@ -2,7 +2,15 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { History as HistoryIcon, Search, FileText, LogIn, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { getHistory, type CheckSummary } from "../lib/api";
+import { getHistory } from "../lib/api";
+
+interface CheckSummary {
+  id: string;
+  type: "analyze" | "review";
+  input_snippet: string;
+  claim_count: number;
+  created_at: string;
+}
 import Navbar from "../components/Navbar";
 
 const PAGE_SIZE = 20;
@@ -27,8 +35,8 @@ export default function History() {
     setError("");
     getHistory(PAGE_SIZE, offset)
       .then((res) => {
-        setChecks(res.checks);
-        setTotal(res.total);
+        setChecks(res.checks as CheckSummary[]);
+        setTotal((res as { checks: unknown[]; total?: number }).total ?? res.checks.length);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -123,12 +131,12 @@ export default function History() {
                     }
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink">{check.inputSnippet}</p>
-                    <p className="mt-0.5 text-xs text-ink-faint">{formatDate(check.createdAt)}</p>
+                    <p className="truncate text-sm font-medium text-ink">{check.input_snippet}</p>
+                    <p className="mt-0.5 text-xs text-ink-faint">{formatDate(check.created_at)}</p>
                   </div>
                   <div className="shrink-0 text-right">
                     <span className="inline-block rounded-full bg-parchment px-2 py-0.5 text-xs font-medium text-ink-muted">
-                      {check.claimCount} claim{check.claimCount !== 1 ? "s" : ""}
+                      {check.claim_count} claim{check.claim_count !== 1 ? "s" : ""}
                     </span>
                   </div>
                 </Link>
