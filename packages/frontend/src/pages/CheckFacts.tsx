@@ -52,6 +52,11 @@ export default function CheckFacts() {
 
   const handleSubmit = useCallback(async () => {
     if (!text.trim()) return;
+    if (text.trim().length < 20) {
+      setError("Please enter at least 20 characters of text to fact-check.");
+      setStatus("error");
+      return;
+    }
     setStatus("extracting");
     setError("");
     setClaims([]);
@@ -182,7 +187,7 @@ export default function CheckFacts() {
               ) : (
                 <button
                   onClick={handleSubmit}
-                  disabled={!text.trim() || isLoading}
+                  disabled={text.trim().length < 20 || isLoading}
                   className={`inline-flex items-center gap-2 rounded-xl bg-cerulean px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-cerulean/20 transition-all hover:bg-cerulean-light disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none ${
                     isLoading ? "opacity-70 cursor-not-allowed" : ""
                   }`}
