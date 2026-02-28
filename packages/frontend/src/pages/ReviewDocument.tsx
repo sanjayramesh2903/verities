@@ -7,6 +7,12 @@ import {
 import { LIMITS } from "@verities/shared";
 import type { ReviewDocumentResponse } from "@verities/shared";
 import { reviewDocument, getUsage } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
+import { extractTextFromFile, SUPPORTED_EXTENSIONS, DocumentParseError } from "../lib/parseDocument";
+import Navbar from "../components/Navbar";
+import RiskClaimRow from "../components/RiskClaimRow";
+import RiskGraph from "../components/RiskGraph";
+import UpgradeModal from "../components/UpgradeModal";
 
 interface UsageData {
   plan_tier: "free" | "pro";
@@ -14,12 +20,6 @@ interface UsageData {
   reviews_limit: number | null;
   reset_at: string;
 }
-import { useAuth } from "../contexts/AuthContext";
-import { extractTextFromFile, SUPPORTED_EXTENSIONS, DocumentParseError } from "../lib/parseDocument";
-import Navbar from "../components/Navbar";
-import RiskClaimRow from "../components/RiskClaimRow";
-import RiskGraph from "../components/RiskGraph";
-import UpgradeModal from "../components/UpgradeModal";
 
 type Status = "idle" | "parsing" | "loading" | "success" | "error";
 

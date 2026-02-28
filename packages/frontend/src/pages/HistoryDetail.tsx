@@ -4,6 +4,14 @@ import { ArrowLeft, GitFork, Share2, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Claim } from "@verities/shared";
 import { getHistoryById, getShareLink } from "../lib/api";
+
+interface CheckDetail {
+  type: string;
+  input_snippet: string;
+  claim_count: number;
+  created_at: string;
+  result_json: unknown;
+}
 import Navbar from "../components/Navbar";
 import ClaimCard from "../components/ClaimCard";
 
@@ -29,14 +37,15 @@ export default function HistoryDetail() {
     setLoading(true);
     getHistoryById(id)
       .then((res) => {
+        const detail = res as CheckDetail;
         setMeta({
-          type: res.type,
-          inputSnippet: res.inputSnippet,
-          claimCount: res.claimCount,
-          createdAt: res.createdAt,
+          type: detail.type,
+          inputSnippet: detail.input_snippet,
+          claimCount: detail.claim_count,
+          createdAt: detail.created_at,
         });
         // The result JSON may be an analyze response with a claims array
-        const result = res.result as { claims?: Claim[] };
+        const result = detail.result_json as { claims?: Claim[] };
         setClaims(result?.claims ?? []);
       })
       .catch((err) => setError(err.message))
@@ -47,8 +56,8 @@ export default function HistoryDetail() {
     if (!id) return;
     setSharing(true);
     try {
-      const { shareUrl } = await getShareLink(id);
-      await navigator.clipboard.writeText(shareUrl);
+      const { share_url } = await getShareLink(id);
+      await navigator.clipboard.writeText(share_url);
       setShared(true);
       toast.success("Share link copied to clipboard!");
       setTimeout(() => setShared(false), 3000);
