@@ -1,5 +1,5 @@
 import { SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { getUserClient } from "./supabase.ts";
+import { getUserClient, getServiceClient } from "./supabase.ts";
 
 export interface AuthUser {
   id: string;
@@ -25,7 +25,8 @@ export async function requireAuth(
   } = await client.auth.getUser();
   if (error || !authUser) throw new Error("Invalid or expired token");
 
-  const { data: userData, error: userErr } = await client
+  // Try to load the app-level user profile
+  const { data: userData } = await client
     .from("users")
     .select(
       "id, email, display_name, avatar_url, plan_tier, usage_checks_this_month, usage_reviews_this_month, usage_reset_at"
@@ -33,7 +34,42 @@ export async function requireAuth(
     .eq("id", authUser.id)
     .single();
 
-  if (userErr || !userData) throw new Error("User profile not found");
+  // If the profile doesn't exist yet (e.g. handle_new_user trigger missed),
+  // create it on-demand using the service role client so RLS doesn't block it.
+  if (!userData) {
+    const svc = getServiceClient();
+    await svc.from("users").upsert(
+      {
+        id: authUser.id,
+        email: authUser.email ?? "",
+        display_name:
+          (authUser.user_metadata?.full_name as string | undefined) ?? null,
+        avatar_url:
+          (authUser.user_metadata?.avatar_url as string | undefined) ?? null,
+        plan_tier: "free",
+        usage_checks_this_month: 0,
+        usage_reviews_this_month: 0,
+        usage_reset_at: new Date(
+          new Date().getFullYear(),
+          new Date().getMonth() + 1,
+          1
+        ).toISOString(),
+      },
+      { onConflict: "id" }
+    );
+
+    const { data: created, error: createErr } = await svc
+      .from("users")
+      .select(
+        "id, email, display_name, avatar_url, plan_tier, usage_checks_this_month, usage_reviews_this_month, usage_reset_at"
+      )
+      .eq("id", authUser.id)
+      .single();
+
+    if (createErr || !created) throw new Error("Failed to create user profile");
+    return { user: created as AuthUser, client };
+  }
+
   return { user: userData as AuthUser, client };
 }
 
@@ -43,7 +79,6 @@ export async function optionalAuth(
   try {
     return await requireAuth(req);
   } catch {
-    const { getServiceClient } = await import("./supabase.ts");
     return { user: null, client: getServiceClient() };
   }
 }
