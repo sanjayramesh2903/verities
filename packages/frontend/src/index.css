@@ -42,6 +42,7 @@
   --font-display: "Inter", "Segoe UI", system-ui, sans-serif;
   --font-body:    "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono:    "JetBrains Mono", "Fira Code", monospace;
+  --font-serif:   Georgia, "Palatino Linotype", "Book Antiqua", Palatino, serif;
 }
 
 /* ── Base ── */

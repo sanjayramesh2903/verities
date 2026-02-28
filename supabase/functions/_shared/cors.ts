@@ -1,10 +1,8 @@
 export function getCorsHeaders(): Record<string, string> {
-  const frontendUrl = Deno.env.get("FRONTEND_URL") ?? "http://localhost:5173";
   return {
-    "Access-Control-Allow-Origin": frontendUrl,
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, GET, PUT, OPTIONS",
-    "Access-Control-Allow-Credentials": "true",
   };
 }
 

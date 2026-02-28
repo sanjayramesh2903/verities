@@ -262,53 +262,45 @@ export default function Landing() {
       <Navbar />
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="hero-gradient text-white py-28 px-6 text-center relative overflow-hidden min-h-[520px] flex flex-col items-center justify-center">
-        {/* Background orbs */}
-        <motion.div
-          className="absolute top-1/3 left-1/4 w-80 h-80 rounded-full bg-teal/10 blur-3xl pointer-events-none"
-          animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full bg-gold/10 blur-3xl pointer-events-none"
-          animate={{ scale: [1.1, 1, 1.1], opacity: [0.2, 0.4, 0.2] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        />
-
+      <section className="flex flex-col items-center justify-center px-6 pt-24 pb-20 text-center bg-white">
         <motion.h1
-          className="text-5xl md:text-6xl font-bold mb-5 relative z-10 leading-tight"
-          initial={{ opacity: 0, y: 30 }}
+          className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-navy leading-[1.08] tracking-tight max-w-3xl"
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: "easeOut" }}
+          transition={{ duration: 0.5, ease: "easeOut" } as const}
         >
           Verify Claims Instantly.<br />
-          <span className="text-gold">Write Smarter.</span>
+          Write Smarter.{" "}
+          <span className="font-serif italic">With AI.</span>
         </motion.h1>
 
         <motion.p
-          className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto relative z-10"
-          initial={{ opacity: 0, y: 20 }}
+          className="mt-7 text-base md:text-lg text-ink-muted leading-relaxed max-w-md"
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.45 }}
+          transition={{ delay: 0.14, duration: 0.45, ease: "easeOut" } as const}
         >
-          AI fact-checking with real sources, citation generation, and evidence-backed rewrites — in seconds.
+          Verities checks factual claims as you write,<br />
+          suggests reliable sources,<br />
+          and inserts properly formatted citations<br />
+          — all without leaving your document.
         </motion.p>
 
         <motion.div
-          className="flex flex-wrap gap-4 justify-center relative z-10"
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.28, duration: 0.4 }}
+          transition={{ delay: 0.26, duration: 0.4, ease: "easeOut" } as const}
+          className="mt-9 flex flex-col items-center gap-3"
         >
-          <button onClick={() => navigate("/check")} className="btn-gold text-base px-8 py-3 text-lg">
-            Get Started Free
-          </button>
           <button
-            onClick={() => navigate("/review")}
-            className="border-2 border-white text-white font-semibold px-8 py-3 rounded-lg hover:bg-white hover:text-navy transition-colors duration-150 text-lg cursor-pointer"
+            onClick={() => navigate("/check")}
+            className="bg-navy text-white font-semibold px-10 py-3.5 rounded-full text-base hover:bg-navy-light active:bg-navy-dark transition-colors duration-150 shadow-md shadow-navy/20 cursor-pointer"
           >
-            Review a Document
+            Get Started
           </button>
+          <p className="text-sm text-ink-faint italic">
+            Backed by verifiable sources — no hallucinated citations.
+          </p>
         </motion.div>
       </section>
 

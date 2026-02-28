@@ -43,24 +43,33 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Nav links — consistent on every page */}
+        {/* Nav links */}
         <div className="flex items-center gap-1">
-          <Link to="/check" className={linkClass("/check")}>
-            <Search className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Check Facts</span>
-          </Link>
-          <Link to="/review" className={linkClass("/review")}>
-            <FileText className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Review</span>
-          </Link>
-          <Link to="/history" className={linkClass("/history")}>
-            <History className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">History</span>
-          </Link>
-          <Link to="/about" className={linkClass("/about")}>
-            <Info className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">About</span>
-          </Link>
+          {user ? (
+            <>
+              <Link to="/check" className={linkClass("/check")}>
+                <Search className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Check Facts</span>
+              </Link>
+              <Link to="/review" className={linkClass("/review")}>
+                <FileText className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Review</span>
+              </Link>
+              <Link to="/history" className={linkClass("/history")}>
+                <History className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">History</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/pricing" className={linkClass("/pricing")}>
+                Pricing
+              </Link>
+              <Link to="/about" className={linkClass("/about")}>
+                Contact Us
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Auth */}
@@ -101,7 +110,7 @@ export default function Navbar() {
           ) : (
             <button
               onClick={login}
-              className="btn-gold text-sm py-1.5 px-4 rounded-full"
+              className="bg-white text-navy font-semibold text-sm py-1.5 px-5 rounded-full hover:bg-white/90 transition-colors duration-150 cursor-pointer"
             >
               Sign In
             </button>
