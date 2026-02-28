@@ -1,17 +1,19 @@
 import { supabase, FUNCTIONS_URL } from "./supabase";
 
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
 // ─── Auth header helper ───────────────────────────────────────────────────
+// Supabase Edge Functions require both `apikey` (anon key) and `Authorization`.
+// When no user is logged in, the anon key is used as the Bearer token.
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const headers: Record<string, string> = {
+  return {
     "Content-Type": "application/json",
+    "apikey": ANON_KEY,
+    "Authorization": `Bearer ${session?.access_token ?? ANON_KEY}`,
   };
-  if (session?.access_token) {
-    headers["Authorization"] = `Bearer ${session.access_token}`;
-  }
-  return headers;
 }
 
 // ─── Generic fetch helper ─────────────────────────────────────────────────

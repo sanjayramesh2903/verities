@@ -43,6 +43,36 @@
   --font-body:    "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono:    "JetBrains Mono", "Fira Code", monospace;
   --font-serif:   Georgia, "Palatino Linotype", "Book Antiqua", Palatino, serif;
+
+  /* ─── Legacy color aliases (maps old token names → new theme) ── */
+  /* cerulean → navy */
+  --color-cerulean:        #1B2B5B;
+  --color-cerulean-light:  #2A3F7E;
+  --color-cerulean-wash:   rgba(27, 43, 91, 0.08);
+  --color-cerulean-border: rgba(27, 43, 91, 0.2);
+
+  /* ivory / parchment → surface */
+  --color-ivory:           #F8FAFC;
+  --color-parchment:       #F8FAFC;
+
+  /* vellum → surface-2 / border */
+  --color-vellum:          #E2E8F0;
+
+  /* terracotta → rose */
+  --color-terracotta:        #F43F5E;
+  --color-terracotta-wash:   rgba(244, 63, 94, 0.06);
+  --color-terracotta-border: rgba(244, 63, 94, 0.2);
+
+  /* sage → green / teal */
+  --color-sage:        #0D9488;
+  --color-sage-wash:   rgba(13, 148, 136, 0.06);
+  --color-sage-border: rgba(13, 148, 136, 0.2);
+
+  /* stone → border-strong */
+  --color-stone: #CBD5E1;
+
+  /* ink-ghost → ink-faint */
+  --color-ink-ghost: #94A3B8;
 }
 
 /* ── Base ── */
@@ -73,7 +103,7 @@ body {
 }
 
 .btn-gold {
-  @apply bg-gold text-navy font-bold px-5 py-2.5 rounded-lg hover:bg-gold-light active:bg-gold-dark transition-colors duration-150 shadow-sm cursor-pointer;
+  @apply bg-teal text-white font-bold px-5 py-2.5 rounded-lg hover:bg-teal-light active:bg-teal transition-colors duration-150 shadow-sm cursor-pointer;
 }
 
 .btn-outline {
