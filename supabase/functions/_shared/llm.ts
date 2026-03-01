@@ -4,8 +4,7 @@ import { buildRewritePrompt } from "./prompts/rewrite.ts";
 
 const GROQ_MODELS = [
   "llama-3.3-70b-versatile",
-  "llama-3.1-70b-versatile",
-  "mixtral-8x7b-32768",
+  "llama-3.1-8b-instant",
   "llama3-8b-8192",
 ];
 
@@ -27,9 +26,9 @@ async function callGroq(
       model,
       messages: [{ role: "user", content: prompt }],
       max_tokens: maxTokens,
-      temperature: 0.1,
+      temperature: 0,
     }),
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (res.status === 429) throw new Error("RATE_LIMIT");
@@ -50,14 +49,14 @@ export async function callGroqWithFallback(
       } catch (err) {
         const msg = (err as Error).message;
         if (msg === "RATE_LIMIT") {
-          await new Promise((r) => setTimeout(r, 600));
+          await new Promise((r) => setTimeout(r, 400));
           continue;
         }
         // Non-rate-limit errors: skip this model
         console.warn(`Model ${model} failed: ${msg}`);
       }
     }
-    await new Promise((r) => setTimeout(r, attempt === 0 ? 1000 : 2000));
+    await new Promise((r) => setTimeout(r, attempt === 0 ? 600 : 1200));
   }
   throw new Error(
     "All Groq models temporarily unavailable. Please try again in a moment."
@@ -98,7 +97,7 @@ export async function extractClaims(
 }
 
 export interface VerdictResult {
-  verdict: "broadly_supported" | "contested" | "refuted" | "unclear";
+  verdict: "broadly_supported" | "overstated" | "disputed" | "unclear";
   confidence: number;
   explanation: string;
   source_ids: string[];
