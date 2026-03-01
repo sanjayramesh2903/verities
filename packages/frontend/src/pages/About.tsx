@@ -68,8 +68,8 @@ const verdicts = [
     label: "Unclear",
     color: "bg-stone-400",
     textColor: "text-ink-muted",
-    bgColor: "bg-white/5",
-    borderColor: "border-white/10",
+    bgColor: "bg-surface-2",
+    borderColor: "border-border",
     desc: "No relevant sources were found, or the evidence is too thin to reach a verdict. This often means the claim is very niche or poorly worded.",
     action: "Verify manually with a primary source before keeping.",
   },
@@ -77,7 +77,7 @@ const verdicts = [
 
 export default function About() {
   return (
-    <div className="min-h-screen bg-dark-base">
+    <div className="min-h-screen bg-white">
       <Navbar />
 
       {/* Hero */}
@@ -102,7 +102,7 @@ export default function About() {
             </Link>
             <Link
               to="/review"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-dark-elevated px-5 py-2.5 text-sm font-semibold text-white transition-all hover:border-white/20"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-2 px-5 py-2.5 text-sm font-semibold text-ink-muted transition-all hover:border-cerulean/30 hover:text-ink"
             >
               <FileText className="h-4 w-4" />
               Review Document
