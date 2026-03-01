@@ -2,106 +2,20 @@ import { FastifyInstance } from "fastify";
 import { AnalyzeClaimsRequestSchema } from "@verities/shared";
 import type { Claim, CitationStyle } from "@verities/shared";
 import type { CacheService } from "../cache/cache.js";
-import { extractClaims, generateVerdict, generateRewrite } from "../services/llm.js";
-import { searchForClaim } from "../services/search.js";
-import { rankSources } from "../services/ranking.js";
-import { formatCitation } from "../services/citations.js";
+import { extractClaims } from "../services/llm.js";
 import { randomUUID } from "crypto";
 import { CacheKeys, CacheTTL } from "../cache/cache.js";
 import { getUser } from "../auth/auth-hook.js";
-
-function getOriginalText(
-  ec: { span_start?: number; span_end?: number; original_text?: string; subject: string; predicate: string },
-  fullText: string
-): string {
-  if (ec.span_start !== undefined && ec.span_end !== undefined &&
-      ec.span_start < ec.span_end && ec.span_end <= fullText.length) {
-    return fullText.slice(ec.span_start, ec.span_end);
-  }
-  return ec.original_text || `${ec.subject} ${ec.predicate}`;
-}
-
-async function processClaim(
-  ec: Awaited<ReturnType<typeof extractClaims>>[number],
-  text: string,
-  citation_style: CitationStyle,
-  cache: CacheService | undefined,
-  server: FastifyInstance
-): Promise<Claim> {
-  const claimText = `${ec.subject} ${ec.predicate}`;
-  const claimCacheKey = CacheKeys.claimResult(claimText, citation_style);
-
-  if (cache) {
-    const cached = await cache.get(claimCacheKey).catch(() => null) as Claim | null;
-    if (cached) {
-      // Re-derive position fields from the current request's text so one user's
-      // original_text / span never leaks into another user's response.
-      return {
-        ...cached,
-        claim_id: randomUUID(),
-        original_text: getOriginalText(ec, text),
-        span: { start: ec.span_start ?? 0, end: ec.span_end ?? 0 },
-      };
-    }
-  }
-
-  const rawResults = await searchForClaim(claimText, cache);
-  const rankedSources = rankSources(ec, rawResults);
-
-  const claimSentence = getOriginalText(ec, text);
-
-  const verdict = await generateVerdict(ec, rankedSources);
-
-  // Skip rewrite for broadly_supported or unclear — no actionable improvement needed
-  const rewriteResult = (verdict.verdict === "broadly_supported" || verdict.verdict === "unclear")
-    ? { rewrites: [] }
-    : await generateRewrite(claimSentence, rankedSources);
-
-  const sources = rankedSources.map((rs) => ({
-    source_id: randomUUID(),
-    title: rs.title,
-    url: rs.url,
-    snippet: rs.snippet,
-    reliability_tier: rs.tier as 1 | 2 | 3 | 4,
-    citation_inline: formatCitation(rs, citation_style, "inline"),
-    citation_bibliography: formatCitation(rs, citation_style, "bibliography"),
-  }));
-
-  const claim: Claim = {
-    claim_id: randomUUID(),
-    original_text: getOriginalText(ec, text),
-    span: { start: ec.span_start ?? 0, end: ec.span_end ?? 0 },
-    verdict: verdict.verdict,
-    explanation: verdict.explanation,
-    sources,
-    rewrites: rewriteResult.rewrites,
-  };
-
-  if (cache) {
-    await cache.set(claimCacheKey, claim, CacheTTL.CLAIM_RESULT).catch(() => {});
-  }
-
-  return claim;
-}
-
-function makeErrorClaim(
-  ec: { span_start?: number; span_end?: number; original_text?: string; subject: string; predicate: string },
-  text: string
-): Claim {
-  return {
-    claim_id: randomUUID(),
-    original_text: getOriginalText(ec, text),
-    span: { start: ec.span_start ?? 0, end: ec.span_end ?? 0 },
-    verdict: "unclear" as const,
-    explanation: "We could not verify this claim at this time. Please try again later.",
-    sources: [],
-    rewrites: [],
-  };
-}
+import { enforceQuota } from "../middleware/quota.js";
+import { processClaim, makeErrorClaim } from "../services/fact-check.js";
 
 export async function analyzeClaimsRoute(server: FastifyInstance) {
   // Original batch endpoint
   server.post("/analyze-claims", async (request, reply) => {
+    // Enforce monthly quota for free-tier users
+    const allowed = await enforceQuota("check", request, reply);
+    if (!allowed) return;
+
     const startTime = Date.now();
     const parsed = AnalyzeClaimsRequestSchema.safeParse(request.body);
     if (!parsed.success) {
@@ -166,6 +80,7 @@ export async function analyzeClaimsRoute(server: FastifyInstance) {
       server.repo.saveCheck(
         user.id, "analyze", text.slice(0, 200), JSON.stringify(response), claims.length
       ).catch((err) => server.log.error(err, "Failed to save check to history"));
+      server.repo.incrementUsage(user.id, "check").catch(() => {});
     }
     if (server.repo) {
       server.repo.logAudit(
@@ -178,6 +93,10 @@ export async function analyzeClaimsRoute(server: FastifyInstance) {
 
   // SSE streaming endpoint — sends claims as they complete
   server.post("/analyze-claims/stream", async (request, reply) => {
+    // Enforce monthly quota before opening the SSE stream
+    const allowed = await enforceQuota("check", request, reply);
+    if (!allowed) return;
+
     const startTime = Date.now();
     const parsed = AnalyzeClaimsRequestSchema.safeParse(request.body);
     if (!parsed.success) {
@@ -269,10 +188,11 @@ export async function analyzeClaimsRoute(server: FastifyInstance) {
         await cache.set(analyzeKey, fullResponse, CacheTTL.ANALYZE_RESULT).catch(() => {});
       }
 
-      // Fire-and-forget history + audit
+      // Fire-and-forget history + quota increment + audit
       if (user && server.repo) {
         const response = { request_id: randomUUID(), claims, metadata: doneMetadata };
         server.repo.saveCheck(user.id, "analyze", text.slice(0, 200), JSON.stringify(response), claims.length).catch(() => {});
+        server.repo.incrementUsage(user.id, "check").catch(() => {});
       }
       if (server.repo) {
         server.repo.logAudit(user?.id ?? null, "analyze", JSON.stringify({ claimCount: claims.length }), request.ip).catch(() => {});

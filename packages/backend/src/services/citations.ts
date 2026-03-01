@@ -2,6 +2,31 @@ import type { CitationStyle, CitationFormat, FormatCitationResponse } from "@ver
 import type { CacheService } from "../cache/cache.js";
 import { CacheKeys, CacheTTL } from "../cache/cache.js";
 
+function assertSafeUrl(urlStr: string): void {
+  let url: URL;
+  try {
+    url = new URL(urlStr);
+  } catch {
+    throw new Error("Invalid URL");
+  }
+  if (!/^https?:$/.test(url.protocol)) {
+    throw new Error("Only HTTP(S) URLs are allowed");
+  }
+  const h = url.hostname.toLowerCase();
+  if (
+    h === "localhost" ||
+    h === "0.0.0.0" ||
+    /^127\./.test(h) ||
+    /^10\./.test(h) ||
+    /^192\.168\./.test(h) ||
+    /^172\.(1[6-9]|2[0-9]|3[01])\./.test(h) ||
+    /^::1$/.test(h) ||
+    /^fd[0-9a-f]{2}:/i.test(h)
+  ) {
+    throw new Error("Private network URLs are not allowed");
+  }
+}
+
 interface SourceMeta {
   title: string;
   url: string;
@@ -117,10 +142,17 @@ export async function formatCitationFromUrl(
   }
 
   try {
+    assertSafeUrl(sourceUrl);
     const response = await fetch(sourceUrl, {
       headers: { "User-Agent": "Verities Citation Bot/1.0" },
       signal: AbortSignal.timeout(5000),
+      redirect: "follow",
     });
+    // Limit response body to 1 MB to prevent DoS via large pages
+    const contentLength = response.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > 1_048_576) {
+      throw new Error("Response too large");
+    }
     const html = await response.text();
 
     const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/is);

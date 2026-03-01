@@ -15,7 +15,7 @@ export default function SourceItem({ source }: { source: Source }) {
   };
 
   return (
-    <div className="group rounded-lg border border-vellum bg-parchment/50 p-3 transition-colors hover:border-stone">
+    <div className="group rounded-lg border border-white/6 bg-dark-elevated/50 p-3 transition-colors hover:border-white/12">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -23,7 +23,7 @@ export default function SourceItem({ source }: { source: Source }) {
               href={source.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-semibold text-cerulean hover:underline underline-offset-2 inline-flex items-center gap-1 truncate"
+              className="text-sm font-semibold text-teal-light hover:underline underline-offset-2 inline-flex items-center gap-1 truncate"
             >
               {source.title}
               <ExternalLink className="h-3 w-3 shrink-0" />
@@ -41,16 +41,16 @@ export default function SourceItem({ source }: { source: Source }) {
       <div className="mt-2 flex items-center gap-2">
         <button
           onClick={() => copyToClipboard(source.citation_inline, "inline")}
-          className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 text-xs font-medium text-ink-muted border border-vellum transition-colors hover:text-ink hover:border-stone"
+          className="inline-flex items-center gap-1 rounded-md bg-white/5 px-2 py-1 text-xs font-medium text-ink-muted border border-white/8 transition-colors hover:text-white hover:border-white/15"
         >
-          {copied === "inline" ? <Check className="h-3 w-3 text-sage" /> : <Copy className="h-3 w-3" />}
+          {copied === "inline" ? <Check className="h-3 w-3 text-teal-light" /> : <Copy className="h-3 w-3" />}
           Inline cite
         </button>
         <button
           onClick={() => copyToClipboard(source.citation_bibliography, "bib")}
-          className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 text-xs font-medium text-ink-muted border border-vellum transition-colors hover:text-ink hover:border-stone"
+          className="inline-flex items-center gap-1 rounded-md bg-white/5 px-2 py-1 text-xs font-medium text-ink-muted border border-white/8 transition-colors hover:text-white hover:border-white/15"
         >
-          {copied === "bib" ? <Check className="h-3 w-3 text-sage" /> : <Copy className="h-3 w-3" />}
+          {copied === "bib" ? <Check className="h-3 w-3 text-teal-light" /> : <Copy className="h-3 w-3" />}
           Full cite
         </button>
       </div>

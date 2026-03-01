@@ -62,7 +62,7 @@ export default function SharedReport() {
   return (
     <div className="min-h-screen bg-ivory">
       {/* Minimal header */}
-      <header className="border-b border-vellum bg-white/80 backdrop-blur-sm">
+      <header className="border-b border-white/10 bg-dark-base/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-6 py-4">
           <BookOpen className="h-5 w-5 text-cerulean" />
           <span className="font-display text-lg font-bold tracking-tight text-ink">
@@ -95,7 +95,7 @@ export default function SharedReport() {
             {/* Metadata row */}
             <div className="flex flex-wrap items-center gap-3">
               {/* Type badge */}
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-vellum bg-white px-3 py-1 text-xs font-semibold text-ink-muted">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-dark-elevated px-3 py-1 text-xs font-semibold text-ink-muted">
                 <FileText className="h-3 w-3" />
                 {typeLabel}
               </span>
@@ -142,7 +142,7 @@ export default function SharedReport() {
             )}
 
             {/* CTA */}
-            <div className="rounded-xl border border-vellum bg-white p-6 text-center">
+            <div className="rounded-xl border border-white/10 bg-dark-elevated p-6 text-center">
               <p className="mb-1 font-display text-base font-semibold text-ink">
                 Want to fact-check your own writing?
               </p>

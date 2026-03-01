@@ -13,10 +13,10 @@ export function buildVerdictPrompt(
   claim: { subject: string; predicate: string; numbers: string | null; dates: string | null },
   sources: { id: string; title: string; snippet: string; tier: number }[]
 ): string {
-  // Use at most 3 sources and truncate snippets to keep token count low for speed
-  const topSources = sources.slice(0, 3);
+  // Use at most 4 sources and truncate snippets to balance context quality with token budget
+  const topSources = sources.slice(0, 4);
   const sourceList = topSources
-    .map((s, i) => `[S${i + 1}|ID:${s.id}|T${s.tier}] "${s.title}"\n${s.snippet.slice(0, 220)}`)
+    .map((s, i) => `[S${i + 1}|ID:${s.id}|T${s.tier}] "${s.title}"\n${s.snippet.slice(0, 600)}`)
     .join("\n\n");
 
   return `Evaluate this claim using ONLY the provided sources.

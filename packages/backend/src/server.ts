@@ -20,6 +20,7 @@ import { authRoutes } from "./routes/auth.js";
 import { historyRoutes } from "./routes/history.js";
 import { preferencesRoutes } from "./routes/preferences.js";
 import { graphRoute } from "./routes/graph.js";
+import { billingRoutes } from "./routes/billing.js";
 
 const server = Fastify({
   logger: {
@@ -70,12 +71,21 @@ async function start() {
   }
   await server.register(errorHandlerPlugin);
 
-  // 6. Health check
-  server.get("/health", async () => ({
-    status: "ok",
-    database: db ? "connected" : "unavailable",
-    cache: env.REDIS_URL ? "redis" : "in-memory",
-  }));
+  // 6. Health check — checks all critical dependencies
+  server.get("/health", async () => {
+    const dbOk = db
+      ? await db.$queryRaw`SELECT 1`.then(() => true).catch(() => false)
+      : false;
+    return {
+      status: dbOk ? "ok" : "degraded",
+      version: process.env.npm_package_version ?? "unknown",
+      database: dbOk ? "connected" : "unavailable",
+      cache: env.REDIS_URL ? "redis" : "in-memory",
+      groq: !!env.GROQ_API_KEY,
+      brave: !!env.BRAVE_API_KEY,
+      stripe: !!env.STRIPE_SECRET_KEY,
+    };
+  });
 
   // 7. Routes
   await server.register(analyzeClaimsRoute, { prefix: "/" });
@@ -85,15 +95,21 @@ async function start() {
   await server.register(historyRoutes, { prefix: "/" });
   await server.register(preferencesRoutes, { prefix: "/" });
   await server.register(graphRoute, { prefix: "/" });
+  await server.register(billingRoutes, { prefix: "/" });
 
-  // 8. Periodic cleanup of expired checks (every 6 hours)
+  // 8. Catch-all 404 handler (must be registered after all routes)
+  server.setNotFoundHandler(async (_req, reply) => {
+    return reply.status(404).send({ error: "Not found" });
+  });
+
+  // 9. Periodic cleanup of expired checks (every 6 hours)
   if (server.repo) {
     setInterval(() => {
       server.repo?.cleanExpiredChecks().catch((err: unknown) => server.log.error(err, "Cleanup failed"));
     }, 6 * 60 * 60 * 1000);
   }
 
-  // 9. Graceful shutdown
+  // 10. Graceful shutdown
   const shutdown = async () => {
     server.log.info("Shutting down...");
     await server.close();
@@ -103,7 +119,7 @@ async function start() {
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
 
-  // 10. Start
+  // 11. Start
   await server.listen({ port: env.PORT, host: "0.0.0.0" });
   server.log.info(`Verities API running on http://localhost:${env.PORT}`);
 }

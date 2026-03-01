@@ -55,6 +55,10 @@ async function callGroq(
 
   if (!response.ok) {
     const errBody = await response.text().catch(() => "");
+    // Surface 429 rate-limit explicitly so callers can back off
+    if (response.status === 429) {
+      throw new Error(`rate_limited: Groq ${model} rate limit hit`);
+    }
     throw new Error(`Groq ${model} error ${response.status}: ${errBody}`);
   }
 
@@ -75,7 +79,7 @@ async function callWithFallback(
   userMessage: string,
   options: RetryOptions = {}
 ): Promise<string> {
-  const { maxRetries = 1, baseDelayMs = 1000, timeoutMs = 30000 } = options;
+  const { maxRetries = 2, baseDelayMs = 1000, timeoutMs = 30000 } = options;
   const lastErrors: string[] = [];
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -86,6 +90,10 @@ async function callWithFallback(
       } catch (err) {
         const msg = (err as Error).message;
         lastErrors.push(`${model}: ${msg}`);
+        // On rate limit, wait before trying the next model
+        if (msg.startsWith("rate_limited")) {
+          await new Promise((r) => setTimeout(r, 500));
+        }
         console.warn(`Model ${model} failed: ${msg}`);
       }
     }
@@ -98,6 +106,10 @@ async function callWithFallback(
   }
 
   const summary = lastErrors[0] ?? "unknown error";
+  // Provide a user-friendly message for rate limit exhaustion
+  if (lastErrors.every((e) => e.includes("rate_limited"))) {
+    throw new Error("AI service is temporarily overloaded — please retry in 30 seconds.");
+  }
   throw new Error(`LLM unavailable — ${summary}`);
 }
 

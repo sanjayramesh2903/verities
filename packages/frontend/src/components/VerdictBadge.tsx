@@ -9,22 +9,22 @@ const config: Record<Verdict, {
   broadly_supported: {
     label: "Broadly Supported",
     icon: CheckCircle2,
-    classes: "bg-sage-wash text-sage border border-sage-border",
+    classes: "bg-green/10 text-green border border-green/20",
   },
   overstated: {
     label: "Overstated",
     icon: AlertTriangle,
-    classes: "bg-amber-wash text-amber border border-amber-border",
+    classes: "bg-amber/10 text-amber-light border border-amber/20",
   },
   disputed: {
     label: "Disputed",
     icon: AlertOctagon,
-    classes: "bg-terracotta-wash text-terracotta border border-terracotta-border",
+    classes: "bg-rose/10 text-rose-light border border-rose/20",
   },
   unclear: {
     label: "Unclear",
     icon: HelpCircle,
-    classes: "bg-slate-wash text-slate border border-slate-border",
+    classes: "bg-white/5 text-ink-muted border border-white/10",
   },
 };
 

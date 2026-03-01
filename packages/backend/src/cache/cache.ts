@@ -31,7 +31,12 @@ class InMemoryCacheService implements CacheService {
     // LRU: move to end of Map (most recently accessed)
     this.store.delete(key);
     this.store.set(key, entry);
-    return JSON.parse(entry.value) as T;
+    try {
+      return JSON.parse(entry.value) as T;
+    } catch {
+      this.store.delete(key);
+      return null;
+    }
   }
 
   async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
@@ -73,7 +78,12 @@ class RedisCacheService implements CacheService {
   async get<T>(key: string): Promise<T | null> {
     const raw = await this.client.get(key);
     if (!raw) return null;
-    return JSON.parse(raw) as T;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      await this.client.del(key).catch(() => {});
+      return null;
+    }
   }
 
   async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {

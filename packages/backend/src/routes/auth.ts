@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { requireAuth } from "../auth/auth-hook.js";
+import { signToken } from "../auth/jwt.js";
 import { env } from "../config/env.js";
 
 export async function authRoutes(server: FastifyInstance) {
@@ -36,8 +37,44 @@ export async function authRoutes(server: FastifyInstance) {
       path: "/",
       httpOnly: true,
       secure: env.NODE_ENV === "production",
-      sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: "lax",
     });
     return { ok: true };
   });
+
+  // Dev-only login — disabled in production, allows testing without Google OAuth
+  if (env.NODE_ENV !== "production") {
+    server.post<{ Body: { email: string } }>(
+      "/auth/dev-login",
+      {
+        schema: {
+          body: {
+            type: "object",
+            required: ["email"],
+            properties: { email: { type: "string" } },
+          },
+        },
+      },
+      async (request, reply) => {
+        if (!server.repo) {
+          return reply.status(503).send({ error: "Database not available" });
+        }
+        const { email } = request.body;
+        const user = await server.repo.findOrCreateUser({
+          googleId: `dev:${email}`,
+          email,
+          displayName: email.split("@")[0],
+        });
+        const token = signToken(server, { sub: user.id, email: user.email });
+        reply.setCookie("verities_token", token, {
+          path: "/",
+          httpOnly: true,
+          secure: false,
+          sameSite: "lax",
+          maxAge: 60 * 60 * 24 * 7,
+        });
+        return { ok: true };
+      }
+    );
+  }
 }

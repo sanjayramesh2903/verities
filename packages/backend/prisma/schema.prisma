@@ -1,5 +1,7 @@
+// NOTE: Switch provider to "postgresql" and update DATABASE_URL for production deployment.
+// Local dev uses SQLite (DATABASE_URL=file:./dev.db).
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -17,12 +19,23 @@ model User {
   avatarUrl    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?                   // soft delete
 
-  checks      Check[]
-  preferences UserPreferences?
-  auditLogs   AuditLog[]
-  topics      Topic[]
-  topicEdges  TopicEdge[]
+  // SaaS billing & quota fields
+  planTier              String   @default("free")    // "free" | "pro"
+  subscriptionStatus    String   @default("active")  // "active" | "cancelled" | "past_due" | "trial"
+  stripeCustomerId      String?  @unique
+  stripeSubscriptionId  String?
+  usageChecksThisMonth  Int      @default(0)
+  usageReviewsThisMonth Int      @default(0)
+  usageResetAt          DateTime @default(now())
+
+  checks         Check[]
+  preferences    UserPreferences?
+  auditLogs      AuditLog[]
+  topics         Topic[]
+  topicEdges     TopicEdge[]
+  sharedReports  SharedReport[]
 }
 
 model Check {
@@ -35,8 +48,9 @@ model Check {
   createdAt    DateTime @default(now())
   expiresAt    DateTime // createdAt + 30 days
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  topicClaims TopicClaim[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicClaims   TopicClaim[]
+  sharedReports SharedReport[]
 
   @@index([userId, createdAt])
   @@index([expiresAt])
@@ -103,5 +117,20 @@ model TopicEdge {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, sourceId, targetId])
+  @@index([userId])
+}
+
+model SharedReport {
+  id         String   @id @default(uuid())
+  userId     String
+  checkId    String
+  shareToken String   @unique @default(uuid())
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime // shareToken + 90 days
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  check Check @relation(fields: [checkId], references: [id], onDelete: Cascade)
+
+  @@index([shareToken])
   @@index([userId])
 }

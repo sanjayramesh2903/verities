@@ -24,15 +24,35 @@ function assignTier(domain: string): number {
   return 3;
 }
 
+const STOPWORDS = new Set([
+  "the", "that", "with", "from", "this", "have", "been", "were", "they",
+  "their", "there", "which", "about", "would", "could", "should", "after",
+  "before", "into", "over", "more", "also", "some", "such", "when", "than",
+  "then", "what", "will", "each", "even", "most", "other", "your", "said",
+]);
+
+const NUMBER_REGEX = /\b\d[\d,.]*%?\b/g;
+
 function computeRelevance(claimText: string, snippet: string): number {
-  const claimWords = new Set(claimText.toLowerCase().split(/\s+/).filter((w) => w.length > 3));
+  const claimWords = new Set(
+    claimText.toLowerCase().split(/\s+/).filter((w) => w.length > 3 && !STOPWORDS.has(w))
+  );
   const snippetWords = snippet.toLowerCase().split(/\s+/);
   if (claimWords.size === 0) return 0;
+
   let matches = 0;
   for (const w of snippetWords) {
     if (claimWords.has(w)) matches++;
   }
-  return Math.min(matches / claimWords.size, 1);
+
+  // Extra weight when numbers in the claim appear in the snippet (strong factual signal)
+  const claimNumbers = claimText.match(NUMBER_REGEX) ?? [];
+  let numericBonus = 0;
+  for (const num of claimNumbers) {
+    if (snippet.includes(num)) numericBonus += 0.15;
+  }
+
+  return Math.min(matches / claimWords.size + numericBonus, 1);
 }
 
 function isRecent(dateStr?: string): boolean {

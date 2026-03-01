@@ -190,6 +190,89 @@ export function createRepository(db: PrismaClient) {
         edges: edges.map((e) => ({ source: e.sourceId, target: e.targetId, weight: e.weight })),
       };
     },
+
+    // ── SaaS: Plan & Usage ───────────────────────────────────────────────────
+
+    async getUserPlan(userId: string) {
+      const user = await db.user.findUnique({
+        where: { id: userId },
+        select: {
+          planTier: true,
+          subscriptionStatus: true,
+          usageChecksThisMonth: true,
+          usageReviewsThisMonth: true,
+          usageResetAt: true,
+        },
+      });
+      return user;
+    },
+
+    async incrementUsage(userId: string, type: "check" | "review") {
+      const field = type === "check" ? "usageChecksThisMonth" : "usageReviewsThisMonth";
+      await db.user.update({
+        where: { id: userId },
+        data: { [field]: { increment: 1 } },
+      });
+    },
+
+    async resetMonthlyUsage(userId: string) {
+      await db.user.update({
+        where: { id: userId },
+        data: {
+          usageChecksThisMonth: 0,
+          usageReviewsThisMonth: 0,
+          usageResetAt: new Date(),
+        },
+      });
+    },
+
+    async upsertStripeCustomer(
+      userId: string,
+      stripeCustomerId: string,
+      stripeSubscriptionId: string,
+      planTier: string,
+      subscriptionStatus: string
+    ) {
+      await db.user.update({
+        where: { id: userId },
+        data: { stripeCustomerId, stripeSubscriptionId, planTier, subscriptionStatus },
+      });
+    },
+
+    async updateSubscriptionStatus(
+      stripeCustomerId: string,
+      updates: { planTier?: string; subscriptionStatus?: string; stripeSubscriptionId?: string }
+    ) {
+      await db.user.update({
+        where: { stripeCustomerId },
+        data: updates,
+      });
+    },
+
+    async softDeleteUser(userId: string) {
+      await db.user.update({
+        where: { id: userId },
+        data: { deletedAt: new Date() },
+      });
+    },
+
+    // ── SaaS: Shared Reports ─────────────────────────────────────────────────
+
+    async createSharedReport(userId: string, checkId: string) {
+      // Return existing report if one already exists for this check
+      const existing = await db.sharedReport.findFirst({ where: { checkId, userId } });
+      if (existing) return existing;
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 90);
+      return db.sharedReport.create({ data: { userId, checkId, expiresAt } });
+    },
+
+    async getSharedReport(shareToken: string) {
+      return db.sharedReport.findUnique({
+        where: { shareToken },
+        include: { check: true },
+      });
+    },
   };
 }
 
