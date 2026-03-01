@@ -29,7 +29,7 @@ const config: Record<Verdict, {
 };
 
 export default function VerdictBadge({ verdict }: { verdict: Verdict }) {
-  const c = config[verdict];
+  const c = config[verdict] ?? config.unclear;
   const Icon = c.icon;
 
   return (
