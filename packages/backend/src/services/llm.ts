@@ -46,6 +46,7 @@ async function callGroq(
           { role: "user", content: userMessage },
         ],
         response_format: { type: "json_object" },
+        temperature: 0, // deterministic output — critical for consistent fact verdicts
       }),
     }),
     new Promise<never>((_, reject) =>
@@ -157,7 +158,7 @@ function findSpan(haystack: string, needle: string): { start: number; end: numbe
 export async function extractClaims(text: string, maxClaims: number): Promise<ExtractedClaim[]> {
   const prompt = buildExtractionPrompt(text, maxClaims);
   const raw = await callWithFallback(EXTRACTION_SYSTEM, prompt, {
-    maxRetries: 1, baseDelayMs: 500, timeoutMs: 20000,
+    maxRetries: 1, baseDelayMs: 500, timeoutMs: 15000,
   });
   const claims = parseJSON(raw, ExtractionResponseSchema).claims;
 
@@ -200,7 +201,7 @@ export async function generateVerdict(
   );
 
   const raw = await callWithFallback(VERDICT_SYSTEM, prompt, {
-    maxRetries: 1, baseDelayMs: 1000, timeoutMs: 20000,
+    maxRetries: 1, baseDelayMs: 800, timeoutMs: 12000,
   });
   return parseJSON(raw, VerdictResponseSchema);
 }

@@ -75,12 +75,18 @@ export function rankSources(claim: ExtractedClaim, rawResults: SearchResult[]): 
     if (claim.numbers && result.snippet.includes(claim.numbers)) bonus += 0.15;
     if (claim.dates && result.snippet.includes(claim.dates)) bonus += 0.10;
     if (isRecent(result.datePublished)) bonus += 0.05;
+    // Extra lift for confirmed Tier 1 academic/government sources
+    if (tier === 1) bonus += 0.10;
 
     let penalty = 0;
-    if (SPAM_DOMAINS.some((d) => result.domain.includes(d))) penalty += 0.5;
-    if (!result.title || !result.snippet) penalty += 0.2;
+    // Hard-eliminate known misinformation / spam domains
+    if (SPAM_DOMAINS.some((d) => result.domain.includes(d))) penalty += 1.0;
+    if (!result.title || !result.snippet) penalty += 0.25;
+    // Penalise user-generated content (forums, wikis, social)
+    if (/\b(reddit|quora|stackoverflow|medium\.com|tumblr|twitter|facebook)\b/.test(result.domain)) penalty += 0.4;
 
-    const finalScore = base * 0.4 + relevance * 0.5 + bonus - penalty;
+    // Tier weight raised to 0.6 so academic domain authority dominates over raw keyword relevance
+    const finalScore = base * 0.6 + relevance * 0.3 + bonus - penalty;
 
     return {
       id: crypto.randomUUID(),
@@ -96,22 +102,14 @@ export function rankSources(claim: ExtractedClaim, rawResults: SearchResult[]): 
 
   scored.sort((a, b) => b.score - a.score);
 
-  const selected: RankedSource[] = [];
-  const hasTier1or2 = scored.some((s) => s.tier <= 2);
+  // Hard academic filter: if credible Tier 1 or Tier 2 sources are available,
+  // do not surface Tier 3/4 results — they add noise without authority.
+  const tier1or2 = scored.filter((s) => s.tier <= 2 && s.score > 0);
+  const pool = tier1or2.length >= LIMITS.MIN_SOURCES_PER_CLAIM
+    ? tier1or2
+    : scored.filter((s) => s.score > 0); // fall back to all if insufficient academic results
 
-  if (hasTier1or2) {
-    const topTier = scored.find((s) => s.tier <= 2);
-    if (topTier && !scored.slice(0, LIMITS.MIN_SOURCES_PER_CLAIM).includes(topTier)) {
-      selected.push(topTier);
-    }
-  }
-
-  for (const s of scored) {
-    if (selected.length >= LIMITS.MAX_SOURCES_PER_CLAIM) break;
-    if (!selected.includes(s)) selected.push(s);
-  }
-
-  return selected.slice(0, LIMITS.MAX_SOURCES_PER_CLAIM);
+  return pool.slice(0, LIMITS.MAX_SOURCES_PER_CLAIM);
 }
 
 const SUPERLATIVE_PATTERNS = /\b(all|every|never|always|none|no one|everyone|best|worst|most|least|largest|smallest|greatest|only)\b/i;

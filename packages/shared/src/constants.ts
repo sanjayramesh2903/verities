@@ -39,29 +39,42 @@ export const LIMITS = {
 
 export const TIER1_DOMAINS = [
   ".edu", ".gov",
-  // Major scientific publishers & journals
+  // Big-five scientific publishers
   "nature.com", "science.org", "thelancet.com", "nejm.org", "cell.com",
   "pnas.org", "bmj.com", "jamanetwork.com", "annals.org",
+  // Oxford, Springer, Elsevier, Wiley, T&F
+  "academic.oup.com", "link.springer.com", "sciencedirect.com",
+  "onlinelibrary.wiley.com", "tandfonline.com",
+  // Open-access mega-journals
+  "plosone.org", "plosbiology.org", "plosmedicine.org",
+  "frontiersin.org", "biomedcentral.com", "elifesciences.org",
   // Preprint & academic repositories
   "arxiv.org", "biorxiv.org", "medrxiv.org", "ssrn.com", "psyarxiv.com",
-  // Academic search & reference
+  "chemrxiv.org", "engrxiv.org",
+  // Academic discovery & databases
   "pubmed.ncbi.nlm.nih.gov", "ncbi.nlm.nih.gov", "scholar.google.com",
-  "jstor.org", "semanticscholar.org",
-  // Research & health orgs (non-.gov TLD)
-  "who.int", "cochrane.org", "britannica.com",
+  "jstor.org", "semanticscholar.org", "europepmc.org",
+  // Engineering & computing
+  "ieee.org", "acm.org", "dl.acm.org",
+  // Authoritative health & science orgs
+  "who.int", "cochrane.org",
+  // Trusted data aggregators
+  "ourworldindata.org", "gapminder.org",
 ];
 
 export const TIER2_DOMAINS = [
-  // Wire services & major news
+  // Wire services & major newspapers
   "apnews.com", "reuters.com", "nytimes.com", "bbc.com", "bbc.co.uk",
   "washingtonpost.com", "theguardian.com", "npr.org", "pbs.org",
   "economist.com", "ft.com", "bloomberg.com",
-  // Science & health media
+  // Evidence-based science/health media
   "scientificamerican.com", "nationalgeographic.com", "theatlantic.com",
-  "mayoclinic.org", "healthline.com",
-  // Policy & research think tanks
-  "pewresearch.org", "rand.org", "cfr.org", "worldbank.org", "imf.org",
-  "un.org",
+  "statnews.com", "medscape.com", "mayoclinic.org",
+  // Data journalism & policy research
+  "fivethirtyeight.com", "pewresearch.org", "rand.org", "cfr.org",
+  "worldbank.org", "imf.org", "un.org", "kff.org",
+  // Encyclopedia & general reference
+  "britannica.com",
 ];
 
 export const SPAM_DOMAINS = [
@@ -71,4 +84,11 @@ export const SPAM_DOMAINS = [
   "beforeitsnews.com",
   "thegatewaypundit.com",
   "zerohedge.com",
+  "breitbart.com",
+  "dailymail.co.uk",
+  "theonion.com",
+  "babylonbee.com",
+  "worldnewsdailyreport.com",
+  "empirenews.net",
+  "nationalreport.net",
 ];
