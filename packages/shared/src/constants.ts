@@ -38,17 +38,37 @@ export const LIMITS = {
 } as const;
 
 export const TIER1_DOMAINS = [
-  ".edu", ".gov", "nature.com", "science.org", "thelancet.com",
-  "nejm.org", "pubmed.ncbi.nlm.nih.gov", "scholar.google.com",
-  "jstor.org", "britannica.com",
+  ".edu", ".gov",
+  // Major scientific publishers & journals
+  "nature.com", "science.org", "thelancet.com", "nejm.org", "cell.com",
+  "pnas.org", "bmj.com", "jamanetwork.com", "annals.org",
+  // Preprint & academic repositories
+  "arxiv.org", "biorxiv.org", "medrxiv.org", "ssrn.com", "psyarxiv.com",
+  // Academic search & reference
+  "pubmed.ncbi.nlm.nih.gov", "ncbi.nlm.nih.gov", "scholar.google.com",
+  "jstor.org", "semanticscholar.org",
+  // Research & health orgs (non-.gov TLD)
+  "who.int", "cochrane.org", "britannica.com",
 ];
 
 export const TIER2_DOMAINS = [
+  // Wire services & major news
   "apnews.com", "reuters.com", "nytimes.com", "bbc.com", "bbc.co.uk",
   "washingtonpost.com", "theguardian.com", "npr.org", "pbs.org",
-  "economist.com", "scientificamerican.com", "nationalgeographic.com",
+  "economist.com", "ft.com", "bloomberg.com",
+  // Science & health media
+  "scientificamerican.com", "nationalgeographic.com", "theatlantic.com",
+  "mayoclinic.org", "healthline.com",
+  // Policy & research think tanks
+  "pewresearch.org", "rand.org", "cfr.org", "worldbank.org", "imf.org",
+  "un.org",
 ];
 
 export const SPAM_DOMAINS = [
   "content-farm-example.com",
+  "naturalnews.com",
+  "infowars.com",
+  "beforeitsnews.com",
+  "thegatewaypundit.com",
+  "zerohedge.com",
 ];
