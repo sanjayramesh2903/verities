@@ -105,7 +105,7 @@ export default function History() {
               </Link>
               <Link
                 to="/review"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-dark-elevated px-4 py-2 text-sm font-semibold text-white transition-all hover:border-white/20"
+                className="inline-flex items-center gap-2 rounded-xl border border-vellum bg-white px-4 py-2 text-sm font-semibold text-ink transition-all hover:border-stone"
               >
                 <FileText className="h-4 w-4" />
                 Review Document
@@ -149,7 +149,7 @@ export default function History() {
                 <button
                   onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
                   disabled={offset === 0}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-dark-elevated px-3 py-1.5 text-sm font-medium text-ink-muted transition-colors hover:border-white/20 disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-vellum bg-white px-3 py-1.5 text-sm font-medium text-ink-muted transition-colors hover:border-stone disabled:opacity-40"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
@@ -160,7 +160,7 @@ export default function History() {
                 <button
                   onClick={() => setOffset(offset + PAGE_SIZE)}
                   disabled={offset + PAGE_SIZE >= total}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-dark-elevated px-3 py-1.5 text-sm font-medium text-ink-muted transition-colors hover:border-white/20 disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-vellum bg-white px-3 py-1.5 text-sm font-medium text-ink-muted transition-colors hover:border-stone disabled:opacity-40"
                 >
                   Next
                   <ChevronRight className="h-4 w-4" />

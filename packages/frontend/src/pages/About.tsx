@@ -40,36 +40,36 @@ const verdicts = [
   {
     label: "Broadly Supported",
     color: "bg-green-500",
-    textColor: "text-green",
-    bgColor: "bg-green/10",
-    borderColor: "border-green/20",
+    textColor: "text-green-700",
+    bgColor: "bg-green-50",
+    borderColor: "border-green-200",
     desc: "The claim aligns with what multiple reliable sources say. You can keep it — consider citing the supporting source.",
     action: "Keep & cite the source provided.",
   },
   {
     label: "Overstated",
     color: "bg-amber-500",
-    textColor: "text-amber-light",
-    bgColor: "bg-amber/10",
-    borderColor: "border-amber/20",
+    textColor: "text-amber-700",
+    bgColor: "bg-amber-50",
+    borderColor: "border-amber-200",
     desc: "The claim goes further than the evidence supports — often a number is wrong, a superlative is unverified, or the scope is exaggerated.",
     action: "Use the suggested rewrite or soften the language yourself.",
   },
   {
     label: "Disputed",
     color: "bg-red-500",
-    textColor: "text-rose-light",
-    bgColor: "bg-rose/10",
-    borderColor: "border-rose/20",
+    textColor: "text-red-700",
+    bgColor: "bg-red-50",
+    borderColor: "border-red-200",
     desc: "Sources actively contradict the claim. It may be a common myth or a factual error.",
     action: "Remove, correct, or clearly attribute the claim as contested.",
   },
   {
     label: "Unclear",
     color: "bg-stone-400",
-    textColor: "text-ink-muted",
-    bgColor: "bg-surface-2",
-    borderColor: "border-border",
+    textColor: "text-stone-600",
+    bgColor: "bg-stone-50",
+    borderColor: "border-stone-200",
     desc: "No relevant sources were found, or the evidence is too thin to reach a verdict. This often means the claim is very niche or poorly worded.",
     action: "Verify manually with a primary source before keeping.",
   },
@@ -102,7 +102,7 @@ export default function About() {
             </Link>
             <Link
               to="/review"
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-2 px-5 py-2.5 text-sm font-semibold text-ink-muted transition-all hover:border-cerulean/30 hover:text-ink"
+              className="inline-flex items-center gap-2 rounded-xl border border-vellum bg-white px-5 py-2.5 text-sm font-semibold text-ink transition-all hover:border-stone"
             >
               <FileText className="h-4 w-4" />
               Review Document
@@ -211,25 +211,25 @@ export default function About() {
               {
                 icon: AlertTriangle,
                 label: "High risk (0.7 – 1.0)",
-                color: "text-rose-light",
-                bg: "bg-rose/10",
-                border: "border-rose/20",
+                color: "text-red-600",
+                bg: "bg-red-50",
+                border: "border-red-200",
                 desc: "The claim uses superlatives, specific statistics, or exact numbers without citation — all common markers of misinformation. These should be your first stop.",
               },
               {
                 icon: HelpCircle,
                 label: "Needs review (0.4 – 0.7)",
-                color: "text-amber-light",
-                bg: "bg-amber/10",
-                border: "border-amber/20",
+                color: "text-amber-600",
+                bg: "bg-amber-50",
+                border: "border-amber-200",
                 desc: "Some risk signals are present but the claim isn't definitively flagged. Worth a manual read and a quick source check.",
               },
               {
                 icon: CheckCircle2,
                 label: "Likely OK (0.0 – 0.4)",
-                color: "text-green",
-                bg: "bg-green/10",
-                border: "border-green/20",
+                color: "text-green-600",
+                bg: "bg-green-50",
+                border: "border-green-200",
                 desc: "The claim is phrased cautiously or is very general. Lower priority — but still worth spot-checking if it's central to your argument.",
               },
             ].map(({ icon: Icon, label, color, bg, border, desc }) => (

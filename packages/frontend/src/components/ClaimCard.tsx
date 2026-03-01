@@ -34,8 +34,8 @@ export default function ClaimCard({ claim, index, onUseRewrite }: ClaimCardProps
           </div>
 
           <div className="flex items-start gap-2">
-            <Quote className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint" />
-            <p className="text-sm font-medium leading-relaxed text-white">
+            <Quote className="mt-0.5 h-4 w-4 shrink-0 text-ink-ghost" />
+            <p className="text-sm font-medium leading-relaxed text-ink">
               {claim.original_text}
             </p>
           </div>
@@ -43,7 +43,7 @@ export default function ClaimCard({ claim, index, onUseRewrite }: ClaimCardProps
 
         <button
           onClick={() => setExpanded(!expanded)}
-          className="shrink-0 rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-white/6 hover:text-white"
+          className="shrink-0 rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-surface hover:text-ink"
           aria-label={expanded ? "Collapse" : "Expand"}
         >
           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -96,7 +96,7 @@ export default function ClaimCard({ claim, index, onUseRewrite }: ClaimCardProps
       {!expanded && (claim.sources.length > 0 || claim.rewrites.length > 0) && (
         <button
           onClick={() => setExpanded(true)}
-          className="mt-2 text-xs font-medium text-teal-light hover:underline underline-offset-2"
+          className="mt-2 text-xs font-medium text-navy hover:underline underline-offset-2"
         >
           Show {claim.sources.length} source{claim.sources.length !== 1 ? "s" : ""}
           {claim.rewrites.length > 0 && ` & ${claim.rewrites.length} rewrite${claim.rewrites.length !== 1 ? "s" : ""}`}

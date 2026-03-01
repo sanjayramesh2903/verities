@@ -91,7 +91,7 @@ export default function HistoryDetail() {
             <button
               onClick={handleShare}
               disabled={sharing}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-dark-elevated px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:border-white/20 hover:text-white disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-vellum bg-white px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:border-stone hover:text-ink disabled:opacity-50"
             >
               {sharing ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

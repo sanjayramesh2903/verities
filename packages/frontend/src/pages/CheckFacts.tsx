@@ -338,7 +338,7 @@ export default function CheckFacts() {
                   <p className="mt-1 text-sm text-ink-muted">{error}</p>
                   <button
                     onClick={handleSubmit}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-dark-elevated px-3 py-1.5 text-xs font-semibold text-rose border border-terracotta-border transition-colors hover:bg-terracotta-wash"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-terracotta border border-terracotta-border transition-colors hover:bg-terracotta-wash"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                     Try again

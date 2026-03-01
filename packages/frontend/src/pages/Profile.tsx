@@ -155,7 +155,7 @@ export default function Profile() {
               <select
                 value={prefs.citation_style}
                 onChange={(e) => setPrefs((p) => ({ ...p, citation_style: e.target.value as UserPreferences["citation_style"] }))}
-                className="rounded-lg border border-white/10 bg-dark-elevated px-3 py-2 text-sm text-white transition-colors hover:border-white/20 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20 w-full max-w-xs"
+                className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink transition-colors hover:border-border-strong focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/20 w-full max-w-xs"
               >
                 <option value="mla">MLA</option>
                 <option value="apa">APA</option>
@@ -173,7 +173,7 @@ export default function Profile() {
                 max={20}
                 value={prefs.max_claims}
                 onChange={(e) => setPrefs((p) => ({ ...p, max_claims: Math.max(1, Math.min(20, parseInt(e.target.value) || 10)) }))}
-                className="rounded-lg border border-white/10 bg-dark-elevated px-3 py-2 text-sm text-white transition-colors hover:border-white/20 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/20 w-24"
+                className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink transition-colors hover:border-border-strong focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/20 w-24"
               />
               <p className="mt-1 text-xs text-ink-faint">Between 1 and 20</p>
             </div>
