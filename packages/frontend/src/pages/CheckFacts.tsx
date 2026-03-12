@@ -84,6 +84,9 @@ export default function CheckFacts() {
           if (message === "free_tier_limit") {
             setShowUpgrade(true);
             setStatus("idle");
+          } else if (message === "session_expired") {
+            setError("Your session expired. Please sign in again.");
+            setStatus("error");
           } else {
             setError(message);
             setStatus("error");

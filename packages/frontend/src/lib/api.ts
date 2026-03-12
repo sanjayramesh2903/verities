@@ -30,6 +30,12 @@ async function callFunction<T>(
   });
 
   if (!res.ok) {
+    // A 401 means the JWT was rejected by Supabase. Clear the stale local
+    // session so the next request falls back to the anon key instead of
+    // re-sending the same bad token on every page.
+    if (res.status === 401) {
+      await supabase.auth.signOut({ scope: "local" });
+    }
     let errData: { error?: string; message?: string; status?: number } = {};
     try {
       errData = await res.json();
@@ -86,6 +92,11 @@ export async function analyzeClaimsStream(params: {
   }
 
   if (!res.ok) {
+    if (res.status === 401) {
+      await supabase.auth.signOut({ scope: "local" });
+      params.onError("session_expired");
+      return;
+    }
     let errData: { error?: string; message?: string } = {};
     try {
       errData = await res.json();
