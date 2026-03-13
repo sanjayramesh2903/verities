@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 
 // Eagerly loaded
 import Landing from "./pages/Landing";
+import AuthCallback from "./pages/AuthCallback";
 
 // Lazy loaded
 const CheckFacts = lazy(() => import("./pages/CheckFacts"));
@@ -47,6 +48,7 @@ function AnimatedRoutes() {
       >
         <Routes location={location}>
           <Route path="/" element={<Landing />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/check" element={<CheckFacts />} />
           <Route path="/review" element={<ReviewDocument />} />
           <Route path="/history" element={<History />} />
