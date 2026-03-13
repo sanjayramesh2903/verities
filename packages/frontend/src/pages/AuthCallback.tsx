@@ -3,40 +3,38 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 /**
- * Landing page for the Google OAuth redirect.
+ * OAuth redirect landing page (PKCE flow).
  *
- * Supabase PKCE flow returns a `?code=` param here. We let the Supabase client
- * exchange that code for a session, then send the user home.  Putting this on
- * its own route avoids race conditions where React Router re-renders the app
- * (e.g. AnimatePresence remounting) before the code exchange completes.
+ * The Supabase client already has `detectSessionInUrl: true`, which means it
+ * automatically exchanges the `?code=` param the moment the client initialises
+ * on this page.  We must NOT call `exchangeCodeForSession` manually — the code
+ * is one-time-use, and a second exchange fails and clears the session, causing
+ * the "logs in for a second then signs out" symptom.
+ *
+ * All we do here is wait for the automatic exchange to complete, then navigate.
  */
 export default function AuthCallback() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Fast path: if the exchange already finished by the time React mounts.
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate("/", { replace: true });
-        return;
       }
+    });
 
-      // PKCE: exchange the code in the URL for real tokens
-      const { searchParams } = new URL(window.location.href);
-      const code = searchParams.get("code");
-      if (code) {
-        supabase.auth
-          .exchangeCodeForSession(window.location.href)
-          .then(({ error }) => {
-            if (error) {
-              console.error("OAuth code exchange failed:", error.message);
-            }
-            navigate("/", { replace: true });
-          });
-      } else {
-        // Nothing to exchange — just go home
+    // Slow path: wait for detectSessionInUrl to finish the exchange.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        subscription.unsubscribe();
         navigate("/", { replace: true });
       }
     });
+
+    return () => subscription.unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
