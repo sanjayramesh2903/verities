@@ -2,14 +2,19 @@ import { rankResults, RankedResult } from "./ranking.ts";
 
 export type { RankedResult as SearchResult };
 
+function buildAcademicQuery(claimText: string): string {
+  return `${claimText} research study evidence`;
+}
+
 export async function searchForClaim(
   claimText: string
 ): Promise<RankedResult[]> {
   const braveKey = Deno.env.get("BRAVE_API_KEY");
+  const query = buildAcademicQuery(claimText);
 
   const raw = braveKey
-    ? await searchBrave(claimText, braveKey)
-    : await searchDuckDuckGo(claimText);
+    ? await searchBrave(query, braveKey)
+    : await searchDuckDuckGo(query);
 
   return rankResults(raw);
 }
@@ -20,7 +25,7 @@ async function searchBrave(
 ): Promise<Omit<RankedResult, "reliability_tier">[]> {
   const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(
     query
-  )}&count=10&safesearch=moderate`;
+  )}&count=15&safesearch=moderate&text_decorations=false`;
 
   const res = await fetch(url, {
     headers: {

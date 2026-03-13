@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Search, BookOpen, Sparkles, Clock, FileText, TrendingUp } from "lucide-react";
-import { motion, useInView } from "framer-motion";
+import { ArrowRight, CheckCircle2, Search, BookOpen, Sparkles, Clock, FileText, TrendingUp, GraduationCap, Newspaper, ShieldCheck, FolderOpen } from "lucide-react";
+import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
-import { getHistory, getUsage } from "../lib/api";
+import { getHistory, getUsage, getProjects, type Project } from "../lib/api";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 interface CheckSummary {
   id: string;
@@ -19,7 +21,6 @@ interface UsageData {
   reviews_used: number;
   reviews_limit: number | null;
 }
-import Navbar from "../components/Navbar";
 
 const steps = [
   {
@@ -65,6 +66,37 @@ const features = [
   },
 ];
 
+const credibilityStats = [
+  { label: "verdict categories", value: "4", sub: "Broadly Supported · Overstated · Disputed · Unclear" },
+  { label: "citation formats", value: "3", sub: "MLA · APA · Chicago" },
+  { label: "sources first", value: "Tier-1", sub: ".edu · .gov · peer-reviewed" },
+];
+
+const personas = [
+  {
+    icon: GraduationCap,
+    tag: "For Students",
+    headline: "Cite with confidence, not guesswork",
+    body: "Paste your essay draft — Verities flags unsupported claims and generates MLA, APA, or Chicago citations from real sources before you submit.",
+    cta: "Check your essay",
+    href: "/check",
+    accent: "bg-navy/6 border-navy/15",
+    iconBg: "bg-navy/10",
+    iconColor: "text-navy",
+  },
+  {
+    icon: Newspaper,
+    tag: "For Journalists",
+    headline: "Verify before you publish",
+    body: "Upload your article draft and get a risk score for every factual assertion — with sources ranked by domain authority, from wire services to .gov records.",
+    cta: "Review an article",
+    href: "/review",
+    accent: "bg-teal/6 border-teal/15",
+    iconBg: "bg-teal/10",
+    iconColor: "text-teal",
+  },
+];
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
@@ -72,10 +104,12 @@ function formatDate(iso: string) {
 function LoggedInDashboard({ user }: { user: { displayName: string | null; email: string } }) {
   const [recentChecks, setRecentChecks] = useState<CheckSummary[]>([]);
   const [usage, setUsage] = useState<UsageData | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     getHistory(3, 0).then((res) => setRecentChecks(res.checks as CheckSummary[])).catch(() => {});
     getUsage().then((data) => setUsage(data as UsageData)).catch(() => {});
+    getProjects().then((res) => setProjects(res.projects)).catch(() => {});
   }, []);
 
   const name = user.displayName ?? user.email.split("@")[0];
@@ -240,8 +274,44 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
               </div>
             </div>
           )}
+
+          {/* Projects widget */}
+          <div className="animate-rise delay-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <FolderOpen className="h-4 w-4 text-ink-muted" />
+                <h2 className="text-sm font-semibold text-ink">Projects</h2>
+              </div>
+              <Link to="/projects" className="text-xs text-navy hover:underline">View all</Link>
+            </div>
+            <div className="scholarly-card p-4">
+              {projects.length === 0 ? (
+                <p className="text-xs text-ink-muted mb-2">Group checks by essay or paper.</p>
+              ) : (
+                <div className="space-y-2 mb-2">
+                  {projects.slice(0, 2).map((p) => (
+                    <Link
+                      key={p.id}
+                      to={`/projects/${p.id}`}
+                      className="flex items-center justify-between text-xs text-ink hover:text-navy transition-colors"
+                    >
+                      <span className="truncate flex-1 font-medium">{p.name}</span>
+                      <span className="shrink-0 text-ink-faint ml-2">{p.check_count} checks</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              <Link
+                to="/projects"
+                className="block text-center text-xs text-navy hover:underline"
+              >
+                {projects.length === 0 ? "Create your first project →" : `${projects.length} project${projects.length !== 1 ? "s" : ""} →`}
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
@@ -249,63 +319,105 @@ function LoggedInDashboard({ user }: { user: { displayName: string | null; email
 export default function Landing() {
   const { user } = useAuth();
   const navigate = useNavigate();
-
-  const featuresRef = useRef<HTMLDivElement>(null);
-  const featuresInView = useInView(featuresRef, { once: true, margin: "-80px" });
+  const personaRef = useRef<HTMLDivElement>(null);
 
   if (user) {
     return <LoggedInDashboard user={user} />;
   }
+
+  const scrollToPersonas = () => {
+    personaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="flex flex-col items-center justify-center px-6 pt-24 pb-20 text-center bg-white">
+      <section className="flex flex-col items-center justify-center px-6 pt-24 pb-16 text-center bg-white">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="mb-5 inline-flex items-center gap-2 rounded-full border border-navy/15 bg-navy/5 px-4 py-1.5"
+        >
+          <ShieldCheck className="h-3.5 w-3.5 text-navy" />
+          <span className="text-xs font-semibold text-navy tracking-wide">AI-powered claim verification</span>
+        </motion.div>
+
         <motion.h1
           className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-navy leading-[1.08] tracking-tight max-w-3xl"
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" } as const}
+          transition={{ delay: 0.08, duration: 0.5, ease: "easeOut" } as const}
         >
-          Verify Claims Instantly.<br />
-          Write Smarter.{" "}
-          <span className="font-serif italic">With AI.</span>
+          Your writing,{" "}
+          <span className="font-serif italic">verified.</span>
         </motion.h1>
 
         <motion.p
-          className="mt-7 text-base md:text-lg text-ink-muted leading-relaxed max-w-md"
+          className="mt-6 text-base md:text-lg text-ink-muted leading-relaxed max-w-xl"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.14, duration: 0.45, ease: "easeOut" } as const}
+          transition={{ delay: 0.18, duration: 0.45, ease: "easeOut" } as const}
         >
-          Verities checks factual claims as you write,<br />
-          suggests reliable sources,<br />
-          and inserts properly formatted citations<br />
-          — all without leaving your document.
+          Verities checks every factual claim in your essay or article — surfacing sources, flagging risks, and suggesting rewrites grounded in evidence.
         </motion.p>
 
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.26, duration: 0.4, ease: "easeOut" } as const}
-          className="mt-9 flex flex-col items-center gap-3"
+          transition={{ delay: 0.3, duration: 0.4, ease: "easeOut" } as const}
+          className="mt-8 flex flex-col items-center gap-3"
         >
           <button
             onClick={() => navigate("/check")}
             className="bg-navy text-white font-semibold px-10 py-3.5 rounded-full text-base hover:bg-navy-light active:bg-navy-dark transition-colors duration-150 shadow-md shadow-navy/20 cursor-pointer"
           >
-            Get Started
+            Get Started Free
           </button>
-          <p className="text-sm text-ink-faint italic">
-            Backed by verifiable sources — no hallucinated citations.
-          </p>
+          <div className="flex items-center gap-4 mt-1">
+            <button
+              onClick={scrollToPersonas}
+              className="text-sm text-ink-muted hover:text-navy transition-colors cursor-pointer"
+            >
+              For students →
+            </button>
+            <span className="text-ink-faint text-xs">·</span>
+            <button
+              onClick={scrollToPersonas}
+              className="text-sm text-ink-muted hover:text-navy transition-colors cursor-pointer"
+            >
+              For journalists →
+            </button>
+          </div>
         </motion.div>
       </section>
 
+      {/* ── Credibility Strip ─────────────────────────────────────── */}
+      <section className="border-y border-border bg-surface">
+        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:divide-x divide-border">
+            {credibilityStats.map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                className="flex flex-col items-center text-center sm:px-6"
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08, duration: 0.35, ease: "easeOut" }}
+              >
+                <span className="text-3xl font-bold text-navy font-display">{stat.value}</span>
+                <span className="text-xs font-semibold text-ink-muted mt-0.5">{stat.label}</span>
+                <span className="text-xs text-ink-faint mt-1">{stat.sub}</span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── How it works ─────────────────────────────────────────── */}
-      <section className="border-t border-border bg-surface">
+      <section className="border-b border-border bg-white">
         <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
           <p className="text-center text-xs font-bold uppercase tracking-widest text-ink-faint mb-3">
             How it works
@@ -344,8 +456,51 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Who it's for (Personas) ───────────────────────────────── */}
+      <section className="border-b border-border bg-surface" ref={personaRef}>
+        <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
+          <p className="text-center text-xs font-bold uppercase tracking-widest text-ink-faint mb-3">
+            Who uses Verities
+          </p>
+          <h2 className="text-center font-display text-2xl font-bold text-navy sm:text-3xl">
+            Built for writers who need to get it right
+          </h2>
+
+          <div className="mt-12 grid gap-6 sm:grid-cols-2">
+            {personas.map((p, i) => {
+              const Icon = p.icon;
+              return (
+                <motion.div
+                  key={p.tag}
+                  className={`rounded-2xl border p-8 flex flex-col gap-5 ${p.accent}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.12, duration: 0.4, ease: "easeOut" }}
+                >
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${p.iconBg}`}>
+                    <Icon className={`h-5 w-5 ${p.iconColor}`} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-ink-faint mb-2">{p.tag}</p>
+                    <h3 className="text-lg font-bold text-ink leading-snug">{p.headline}</h3>
+                    <p className="mt-3 text-sm leading-relaxed text-ink-muted">{p.body}</p>
+                  </div>
+                  <Link
+                    to={p.href}
+                    className="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-navy hover:gap-2.5 transition-all"
+                  >
+                    {p.cta} <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* ── Features ─────────────────────────────────────────────── */}
-      <section className="border-t border-border" ref={featuresRef}>
+      <section className="border-b border-border bg-white">
         <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6">
           <p className="text-center text-xs font-bold uppercase tracking-widest text-ink-faint mb-3">
             What you get
@@ -380,13 +535,13 @@ export default function Landing() {
       </section>
 
       {/* ── CTA Band ─────────────────────────────────────────────── */}
-      <section className="border-t border-border bg-navy">
+      <section className="bg-navy">
         <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 text-center">
           <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">
             Start writing with confidence
           </h2>
           <p className="mt-3 text-white/60 text-sm leading-relaxed">
-            Free to use. No account required to check your first claims.
+            Free forever on the core plan. No credit card, no account needed to start.
           </p>
           <button
             onClick={() => navigate("/check")}
@@ -398,24 +553,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Footer ───────────────────────────────────────────────── */}
-      <footer className="border-t border-navy-dark bg-navy">
-        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-            <div className="flex items-center gap-2">
-              <span className="font-serif text-white/60 text-lg leading-none select-none">"</span>
-              <span className="text-sm font-semibold text-white">Verities</span>
-            </div>
-            <div className="flex items-center gap-6">
-              <Link to="/about" className="text-xs text-white/40 hover:text-white/70 transition-colors">About</Link>
-              <Link to="/check" className="text-xs text-white/40 hover:text-white/70 transition-colors">Check Facts</Link>
-              <Link to="/review" className="text-xs text-white/40 hover:text-white/70 transition-colors">Review Document</Link>
-              <Link to="/pricing" className="text-xs text-white/40 hover:text-white/70 transition-colors">Pricing</Link>
-            </div>
-            <p className="text-xs text-white/25">© {new Date().getFullYear()} Verities</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

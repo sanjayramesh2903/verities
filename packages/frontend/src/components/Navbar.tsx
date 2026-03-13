@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Search, FileText, History, LogOut, Info } from "lucide-react";
+import { Search, FileText, History, FolderOpen, LogOut } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Navbar() {
@@ -59,14 +59,25 @@ export default function Navbar() {
                 <History className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">History</span>
               </Link>
+              <Link to="/projects" className={linkClass("/projects")}>
+                <FolderOpen className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Projects</span>
+              </Link>
+              <span className="mx-1 h-4 w-px bg-white/20" />
+              <Link to="/about" className={linkClass("/about")}>
+                <span className="hidden sm:inline">About</span>
+              </Link>
+              <Link to="/pricing" className={linkClass("/pricing")}>
+                <span className="hidden sm:inline">Pricing</span>
+              </Link>
             </>
           ) : (
             <>
+              <Link to="/about" className={linkClass("/about")}>
+                About
+              </Link>
               <Link to="/pricing" className={linkClass("/pricing")}>
                 Pricing
-              </Link>
-              <Link to="/about" className={linkClass("/about")}>
-                Contact Us
               </Link>
             </>
           )}

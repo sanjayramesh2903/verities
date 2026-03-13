@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import Navbar from "../components/Navbar";
-import { useAuth } from "../contexts/AuthContext";
-// Billing coming soon — createCheckoutSession not yet implemented
+import Footer from "../components/Footer";
 
 const FREE_FEATURES = [
   "5 fact-checks / month",
@@ -41,22 +40,10 @@ const FAQS: { q: string; a: string }[] = [
 ];
 
 export default function Pricing() {
-  const { user } = useAuth();
-  const [upgradeLoading, setUpgradeLoading] = useState(false);
-  const [upgradeError, setUpgradeError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const handleUpgrade = () => {
-    if (!user) {
-      setUpgradeError("Please sign in first to upgrade.");
-      return;
-    }
-    setUpgradeError("");
-    window.alert("Billing coming soon. Contact hello@verities.app to upgrade.");
-  };
-
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen bg-ivory flex flex-col">
       <Navbar />
 
       {/* Hero */}
@@ -70,7 +57,7 @@ export default function Pricing() {
       </section>
 
       {/* Plan cards */}
-      <section className="mx-auto max-w-4xl px-4 pb-16 sm:px-6">
+      <section className="mx-auto max-w-4xl px-4 pb-12 sm:px-6 w-full">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 animate-slide-up">
 
           {/* Free card */}
@@ -129,32 +116,27 @@ export default function Pricing() {
               ))}
             </ul>
 
-            {upgradeError && (
-              <p className="mb-3 rounded-lg bg-white/10 px-3 py-2 text-sm text-red-300">
-                {upgradeError}
-              </p>
-            )}
-
-            <button
-              onClick={handleUpgrade}
-              disabled={upgradeLoading}
-              className="w-full rounded-xl bg-cerulean px-5 py-3 text-sm font-semibold text-white shadow-md shadow-cerulean/30 transition-all hover:bg-cerulean-light disabled:opacity-60 inline-flex items-center justify-center gap-2"
+            <a
+              href="mailto:hello@verities.app?subject=Upgrade%20to%20Pro"
+              className="w-full rounded-xl bg-cerulean px-5 py-3 text-sm font-semibold text-white shadow-md shadow-cerulean/30 transition-all hover:bg-cerulean-light inline-flex items-center justify-center gap-2 text-center"
             >
-              {upgradeLoading ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Redirecting…
-                </>
-              ) : (
-                "Upgrade to Pro"
-              )}
-            </button>
+              Upgrade to Pro
+            </a>
           </div>
         </div>
+
+        {/* Academic discount note */}
+        <p className="text-center text-sm text-ink-faint mt-6">
+          Academic discount available —{" "}
+          <a href="mailto:hello@verities.app?subject=Academic%20Discount" className="text-navy underline-offset-2 hover:underline">
+            contact us
+          </a>{" "}
+          at hello@verities.app
+        </p>
       </section>
 
       {/* FAQ */}
-      <section className="mx-auto max-w-2xl px-4 pb-20 sm:px-6">
+      <section className="mx-auto max-w-2xl px-4 pb-20 sm:px-6 w-full">
         <h2 className="font-display text-2xl font-bold text-ink text-center mb-8 animate-rise">
           Frequently Asked Questions
         </h2>
@@ -185,6 +167,10 @@ export default function Pricing() {
           ))}
         </div>
       </section>
+
+      <div className="mt-auto">
+        <Footer />
+      </div>
     </div>
   );
 }

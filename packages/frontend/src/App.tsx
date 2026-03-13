@@ -9,14 +9,16 @@ import Landing from "./pages/Landing";
 import AuthCallback from "./pages/AuthCallback";
 
 // Lazy loaded
-const CheckFacts = lazy(() => import("./pages/CheckFacts"));
+const CheckFacts    = lazy(() => import("./pages/CheckFacts"));
 const ReviewDocument = lazy(() => import("./pages/ReviewDocument"));
-const History = lazy(() => import("./pages/History"));
+const History       = lazy(() => import("./pages/History"));
 const HistoryDetail = lazy(() => import("./pages/HistoryDetail"));
-const Profile = lazy(() => import("./pages/Profile"));
-const About = lazy(() => import("./pages/About"));
-const Pricing = lazy(() => import("./pages/Pricing"));
-const SharedReport = lazy(() => import("./pages/SharedReport"));
+const Projects      = lazy(() => import("./pages/Projects"));
+const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
+const Profile       = lazy(() => import("./pages/Profile"));
+const About         = lazy(() => import("./pages/About"));
+const Pricing       = lazy(() => import("./pages/Pricing"));
+const SharedReport  = lazy(() => import("./pages/SharedReport"));
 
 function PageLoader() {
   return (
@@ -53,6 +55,8 @@ function AnimatedRoutes() {
           <Route path="/review" element={<ReviewDocument />} />
           <Route path="/history" element={<History />} />
           <Route path="/history/:id" element={<HistoryDetail />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/about" element={<About />} />
           <Route path="/pricing" element={<Pricing />} />

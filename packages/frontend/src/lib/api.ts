@@ -207,3 +207,124 @@ export const getPublicReport = (token: string) =>
     undefined,
     "GET"
   );
+
+// ─── Projects ─────────────────────────────────────────────────────────────
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  check_count: number;
+  credibility_score: number | null;
+}
+
+export interface ProjectCheck {
+  id: string;
+  type: "analyze" | "review";
+  input_snippet: string;
+  claim_count: number;
+  created_at: string;
+  added_at: string;
+  result_json: {
+    claims?: Array<{
+      claim_id: string;
+      original_text: string;
+      verdict: "broadly_supported" | "overstated" | "disputed" | "unclear";
+      explanation: string;
+      sources: unknown[];
+      rewrites: unknown[];
+    }>;
+    metadata?: unknown;
+  } | null;
+}
+
+export interface ProjectDetail extends Omit<Project, "check_count"> {
+  credibility_score: number | null;
+  checks: ProjectCheck[];
+}
+
+export const getProjects = () =>
+  callFunction<{ projects: Project[] }>("projects", undefined, "GET");
+
+export const getProjectById = (id: string) =>
+  callFunction<{ project: ProjectDetail }>(
+    `projects?id=${encodeURIComponent(id)}`,
+    undefined,
+    "GET"
+  );
+
+export const createProject = (data: { name: string; description?: string }) =>
+  callFunction<{ project: Project }>("projects", data, "POST");
+
+export const updateProject = (data: {
+  id: string;
+  name?: string;
+  description?: string;
+}) => callFunction<{ project: Project }>("projects", data, "PATCH");
+
+export const deleteProject = (id: string) =>
+  callFunction<{ ok: boolean }>(
+    `projects?id=${encodeURIComponent(id)}`,
+    undefined,
+    "DELETE"
+  );
+
+export const addCheckToProject = (projectId: string, checkId: string) =>
+  callFunction<{ ok: boolean }>("projects", {
+    action: "add_check",
+    project_id: projectId,
+    check_id: checkId,
+  });
+
+export const removeCheckFromProject = (projectId: string, checkId: string) =>
+  callFunction<{ ok: boolean }>("projects", {
+    action: "remove_check",
+    project_id: projectId,
+    check_id: checkId,
+  });
+
+// ─── Saved Claims ─────────────────────────────────────────────────────────
+
+export interface SavedClaim {
+  id: string;
+  check_id: string;
+  claim_id: string;
+  claim_text: string;
+  verdict: "broadly_supported" | "overstated" | "disputed" | "unclear";
+  project_id: string | null;
+  note: string | null;
+  saved_at: string;
+}
+
+export const getSavedClaims = (filters?: {
+  project_id?: string;
+  check_id?: string;
+}) => {
+  const params = new URLSearchParams();
+  if (filters?.project_id) params.set("project_id", filters.project_id);
+  if (filters?.check_id)   params.set("check_id", filters.check_id);
+  const qs = params.toString();
+  return callFunction<{ saved_claims: SavedClaim[] }>(
+    `saved-claims${qs ? "?" + qs : ""}`,
+    undefined,
+    "GET"
+  );
+};
+
+export const saveClaim = (data: {
+  check_id: string;
+  claim_id: string;
+  claim_text: string;
+  verdict: string;
+  project_id?: string;
+  note?: string;
+}) => callFunction<{ saved_claim: SavedClaim }>("saved-claims", data, "POST");
+
+export const unsaveClaim = (savedClaimId: string) =>
+  callFunction<{ ok: boolean }>(
+    `saved-claims?id=${encodeURIComponent(savedClaimId)}`,
+    undefined,
+    "DELETE"
+  );

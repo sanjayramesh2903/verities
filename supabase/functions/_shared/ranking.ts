@@ -9,6 +9,7 @@ export interface RankedResult {
 
 const TIER1_DOMAINS = new Set([
   "pubmed.ncbi.nlm.nih.gov",
+  "ncbi.nlm.nih.gov",
   "nature.com",
   "science.org",
   "nejm.org",
@@ -17,8 +18,31 @@ const TIER1_DOMAINS = new Set([
   "cell.com",
   "pnas.org",
   "arxiv.org",
+  "biorxiv.org",
+  "medrxiv.org",
   "jstor.org",
   "ssrn.com",
+  "cochrane.org",
+  "jamanetwork.com",
+  "annals.org",
+  "plosone.org",
+  "plos.org",
+  "frontiersin.org",
+  "springer.com",
+  "link.springer.com",
+  "sciencedirect.com",
+  "wiley.com",
+  "onlinelibrary.wiley.com",
+  "tandfonline.com",
+  "oxford.ac.uk",
+  "academic.oup.com",
+  "europepmc.org",
+  "semanticscholar.org",
+  "ieee.org",
+  "ieeexplore.ieee.org",
+  "dl.acm.org",
+  "ourworldindata.org",
+  "gapminder.org",
   "cdc.gov",
   "who.int",
   "nih.gov",
@@ -40,19 +64,51 @@ const TIER2_DOMAINS = new Set([
   "factcheck.org",
   "snopes.com",
   "theatlantic.com",
-  "science.org",
   "scientificamerican.com",
+  "pewresearch.org",
+  "rand.org",
+  "cfr.org",
+  "worldbank.org",
+  "imf.org",
+  "un.org",
+  "mayoclinic.org",
+  "clevelandclinic.org",
+  "kff.org",
+  "statnews.com",
+  "medscape.com",
+  "britannica.com",
 ]);
 
 const SPAM_DOMAINS = new Set([
   "pinterest.com",
   "facebook.com",
   "twitter.com",
+  "x.com",
   "instagram.com",
   "tiktok.com",
   "amazon.com",
   "ebay.com",
   "etsy.com",
+  "reddit.com",
+  "quora.com",
+  "yahoo.com",
+  "naturalnews.com",
+  "infowars.com",
+  "beforeitsnews.com",
+  "thegatewaypundit.com",
+  "zerohedge.com",
+  "breitbart.com",
+  "dailymail.co.uk",
+  "theonion.com",
+  "babylonbee.com",
+]);
+
+const SOCIAL_DOMAINS = new Set([
+  "medium.com",
+  "substack.com",
+  "blogspot.com",
+  "wordpress.com",
+  "tumblr.com",
 ]);
 
 function assignTier(domain: string): 1 | 2 | 3 | 4 {
@@ -70,11 +126,13 @@ function assignTier(domain: string): 1 | 2 | 3 | 4 {
 export function rankResults(
   results: Omit<RankedResult, "reliability_tier">[]
 ): RankedResult[] {
-  return results
+  const ranked = results
     .filter((r) => r.url && r.title && !SPAM_DOMAINS.has(r.domain))
     .map((r) => {
       const tier = assignTier(r.domain);
-      const tierScore = [1.0, 0.85, 0.65, 0.5][tier - 1];
+      const tierScore = [1.0, 0.82, 0.55, 0.35][tier - 1];
+      const tier1Bonus = tier === 1 ? 0.10 : 0;
+      const socialPenalty = SOCIAL_DOMAINS.has(r.domain) ? -0.25 : 0;
       const hasNumbers = /\d/.test(r.snippet) ? 0.08 : 0;
       const hasDates =
         /\b(20\d{2}|19\d{2})\b/.test(r.snippet) ? 0.05 : 0;
@@ -85,12 +143,20 @@ export function rankResults(
           ? 0.07
           : 0;
       const score = Math.min(
-        tierScore + hasNumbers + hasDates + isRecent,
+        tierScore + tier1Bonus + socialPenalty + hasNumbers + hasDates + isRecent,
         1
       );
       return { ...r, reliability_tier: tier, _score: score };
     })
-    .sort((a, b) => b._score - a._score)
+    .sort((a, b) => b._score - a._score);
+
+  // Prefer academic results: if Tier 1 or 2 sources exist, drop Tier 3/4 sources
+  const hasAcademic = ranked.some((r) => r.reliability_tier <= 2);
+  const filtered = hasAcademic
+    ? ranked.filter((r) => r.reliability_tier <= 2)
+    : ranked;
+
+  return filtered
     .slice(0, 8)
     .map(({ _score: _s, ...r }) => r as RankedResult);
 }

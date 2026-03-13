@@ -27,16 +27,16 @@ ${sourcesFormatted}
 
 VERDICT DEFINITIONS:
 - "broadly_supported": Multiple credible sources (Tier 1 or 2) confirm the claim without significant contradiction
-- "contested": Sources disagree, only partially support, or the evidence is mixed
-- "refuted": One or more credible sources directly contradict the claim
+- "overstated": The claim has a factual basis but exaggerates, cherry-picks, or omits important context
+- "disputed": One or more credible sources directly contradict the claim
 - "unclear": Sources are irrelevant, missing, or too vague to evaluate the claim
 
 Return ONLY a valid JSON object. No markdown fences, no explanation outside the JSON.
 
 {
-  "verdict": "broadly_supported" | "contested" | "refuted" | "unclear",
+  "verdict": "broadly_supported" | "overstated" | "disputed" | "unclear",
   "confidence": <number 0.0-1.0>,
-  "explanation": "<2-3 sentences citing sources like [S1], [S2]. Be specific about what the sources say.>",
+  "explanation": "<2-3 sentences of college-level academic prose citing sources like [S1], [S2]. Name the source and be specific about what the evidence says.>",
   "source_ids": ["S1", "S2"]
 }`;
 }

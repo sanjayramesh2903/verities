@@ -136,8 +136,8 @@ serve(async (req: Request) => {
                 );
 
                 const rewrites =
-                  verdictResult.verdict === "contested" ||
-                  verdictResult.verdict === "refuted"
+                  verdictResult.verdict === "overstated" ||
+                  verdictResult.verdict === "disputed"
                     ? await generateRewrite(claim.original_text, sources)
                     : [];
 

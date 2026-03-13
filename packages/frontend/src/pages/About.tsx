@@ -5,6 +5,7 @@ import {
   TrendingUp, Zap,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 const pipeline = [
   {
@@ -86,9 +87,9 @@ export default function About() {
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-cerulean shadow-lg shadow-cerulean/20">
             <Shield className="h-7 w-7 text-white" />
           </div>
-          <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">About Verities</h1>
+          <h1 className="font-display text-3xl font-bold text-ink sm:text-4xl">Built for writers who care about getting it right</h1>
           <p className="mt-4 text-lg leading-relaxed text-ink-muted">
-            Verities helps students and knowledge workers verify factual claims in their
+            Verities helps students and journalists verify factual claims in their
             writing — providing verdicts, evidence-backed rewrites, and copy-ready citations.
           </p>
           <div className="mt-8 flex justify-center gap-3 flex-wrap">
@@ -108,6 +109,16 @@ export default function About() {
               Review Document
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Mission */}
+      <section className="border-b border-vellum bg-white">
+        <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+          <p className="text-base leading-relaxed text-ink-muted italic text-center">
+            "We built Verities because academic and journalistic integrity shouldn't depend on manual spot-checks.
+            AI should make careful writing easier — not replace the writer."
+          </p>
         </div>
       </section>
 
@@ -350,7 +361,7 @@ export default function About() {
         </div>
       </section>
 
-      {/* Footer CTA */}
+      {/* CTA Band */}
       <section className="bg-navy">
         <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6 text-center">
           <BookOpen className="mx-auto mb-4 h-8 w-8 text-white/60" />
@@ -374,6 +385,8 @@ export default function About() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }
